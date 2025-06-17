@@ -67,3 +67,7 @@ output/
 ehthumbs.db
 Thumbs.db
 EOF < /dev/null
+academic_test_results/*
+academic_test_results/*
+full_scale_results*
+full_scale_summary_*

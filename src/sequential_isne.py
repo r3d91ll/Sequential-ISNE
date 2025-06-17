@@ -393,9 +393,15 @@ class SequentialISNE:
         Returns training metrics and statistics.
         """
         if not HAS_TORCH:
+            logger.warning("PyTorch not available, using fallback training")
             return self._train_embeddings_fallback()
         
-        logger.info("Starting Sequential-ISNE training")
+        # Clear GPU cache if available
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+            logger.info("Cleared GPU cache before training")
+        
+        logger.info("Starting Sequential-ISNE training with PyTorch")
         
         # Initialize model with dynamic node count for academic scale
         device = self._get_device()
@@ -568,6 +574,107 @@ class SequentialISNE:
         # Sort by similarity and return top k
         similarities.sort(key=lambda x: x[1], reverse=True)
         return similarities[:k]
+    
+    def compute_all_similarities_gpu(self, similarity_threshold: float = 0.5) -> List[Tuple[int, int, float]]:
+        """
+        GPU-accelerated computation of all pairwise similarities above threshold.
+        
+        Returns:
+            List of (chunk_id_a, chunk_id_b, similarity) tuples
+        """
+        if self.trained_embeddings is None:
+            logger.warning("No trained embeddings available for GPU similarity computation")
+            return []
+        
+        if not HAS_TORCH:
+            logger.warning("PyTorch not available, falling back to CPU computation")
+            return self._compute_all_similarities_cpu(similarity_threshold)
+        
+        device = self._get_device()
+        logger.info(f"Computing all pairwise similarities on {device}")
+        
+        # Convert embeddings to GPU tensor
+        embeddings_tensor = torch.tensor(self.trained_embeddings, device=device, dtype=torch.float32)
+        
+        # Normalize embeddings for cosine similarity
+        embeddings_normalized = torch.nn.functional.normalize(embeddings_tensor, p=2, dim=1)
+        
+        # Compute similarity matrix in batches to manage GPU memory
+        # Adjust batch size based on available GPU memory
+        if device == "cuda":
+            try:
+                gpu_memory_gb = torch.cuda.get_device_properties(0).total_memory / 1e9
+                # Estimate batch size based on GPU memory (conservative)
+                max_batch_size = min(200, int(gpu_memory_gb * 10))
+                logger.info(f"GPU memory: {gpu_memory_gb:.1f}GB, using batch size: {max_batch_size}")
+            except:
+                max_batch_size = 100
+        else:
+            max_batch_size = 50
+            
+        batch_size = min(max_batch_size, embeddings_normalized.size(0))
+        chunk_ids = list(self.node_to_index.keys())
+        similar_pairs = []
+        
+        logger.info(f"Processing {len(chunk_ids)} chunks in batches of {batch_size} on {device}")
+        
+        for i in range(0, len(chunk_ids), batch_size):
+            batch_end = min(i + batch_size, len(chunk_ids))
+            batch_embeddings = embeddings_normalized[i:batch_end]
+            
+            # Compute similarities between this batch and all embeddings
+            similarities = torch.mm(batch_embeddings, embeddings_normalized.t())
+            
+            # Find pairs above threshold (excluding self-similarities)
+            for batch_idx, global_idx_a in enumerate(range(i, batch_end)):
+                chunk_id_a = chunk_ids[global_idx_a]
+                
+                # Only look at upper triangle to avoid duplicates
+                for global_idx_b in range(global_idx_a + 1, len(chunk_ids)):
+                    chunk_id_b = chunk_ids[global_idx_b]
+                    similarity = similarities[batch_idx, global_idx_b].item()
+                    
+                    if similarity >= similarity_threshold:
+                        similar_pairs.append((chunk_id_a, chunk_id_b, similarity))
+            
+            if i % (batch_size * 5) == 0:
+                logger.info(f"GPU similarity progress: {batch_end}/{len(chunk_ids)} chunks processed")
+        
+        logger.info(f"GPU computation found {len(similar_pairs)} similar pairs above threshold {similarity_threshold}")
+        
+        # Clear GPU cache after computation
+        if device == "cuda":
+            torch.cuda.empty_cache()
+            logger.info("Cleared GPU cache after similarity computation")
+        
+        return similar_pairs
+    
+    def _compute_all_similarities_cpu(self, similarity_threshold: float = 0.5) -> List[Tuple[int, int, float]]:
+        """Fallback CPU computation of all pairwise similarities."""
+        logger.info("Computing all pairwise similarities on CPU (fallback)")
+        
+        chunk_ids = list(self.node_to_index.keys())
+        similar_pairs = []
+        
+        # Normalize embeddings for cosine similarity
+        norms = np.linalg.norm(self.trained_embeddings, axis=1, keepdims=True)
+        normalized_embeddings = self.trained_embeddings / norms
+        
+        for i, chunk_id_a in enumerate(chunk_ids):
+            if i % 100 == 0:
+                logger.info(f"CPU similarity progress: {i}/{len(chunk_ids)} chunks processed")
+            
+            for j in range(i + 1, len(chunk_ids)):
+                chunk_id_b = chunk_ids[j]
+                
+                # Cosine similarity using normalized embeddings
+                similarity = np.dot(normalized_embeddings[i], normalized_embeddings[j])
+                
+                if similarity >= similarity_threshold:
+                    similar_pairs.append((chunk_id_a, chunk_id_b, similarity))
+        
+        logger.info(f"CPU computation found {len(similar_pairs)} similar pairs above threshold {similarity_threshold}")
+        return similar_pairs
     
     def save_model(self, output_path: str) -> None:
         """Save the trained model and embeddings."""

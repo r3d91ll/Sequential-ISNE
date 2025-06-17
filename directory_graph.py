@@ -319,7 +319,7 @@ class DirectoryGraph:
             'nodes': self.graph.number_of_nodes(),
             'edges': self.graph.number_of_edges(),
             'density': nx.density(self.graph),
-            'is_connected': nx.is_weakly_connected(self.graph),
+            'is_connected': nx.is_weakly_connected(self.graph) if self.graph.number_of_nodes() > 0 else False,
             'edge_types': self.edge_types.copy()
         }
         

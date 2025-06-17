@@ -14,12 +14,17 @@ Sequential-ISNE discovers theory-practice bridges between research papers and co
 # Install dependencies
 poetry install
 
-# Run demo
-poetry run python demo.py /path/to/dataset
+# Run focused demo
+python3 simple_demo.py /path/to/dataset
 
-# With configuration
-poetry run python demo.py /path/to/dataset --config config.yaml
+# Run comprehensive academic validation
+python3 academic_test.py
+
+# Full pipeline (for well-prepared datasets)
+python3 demo.py /path/to/dataset --config config.yaml
 ```
+
+**⚠️ Important**: For optimal results, datasets must be properly prepared with documentation cross-references. See [Dataset Preparation Guide](./DATASET_PREPARATION_GUIDE.md) for detailed instructions.
 
 ## Key Features
 
@@ -100,6 +105,87 @@ results = model.train_embeddings()
 ## Key Innovation
 
 **Directory Structure as Implicit Knowledge Graph**: The breakthrough insight is using filesystem organization to bootstrap the graph structure that ISNE requires. This solves the chicken-and-egg problem of needing a graph to apply a graph embedding algorithm.
+
+## 📋 Dataset Preparation Requirements
+
+### Critical: Documentation Cross-Reference Structure
+
+For optimal ISNE bootstrap, datasets **must** include:
+
+#### 1. **Directory-Level Documentation**
+Every directory requires custom documentation:
+```
+dataset/
+├── README.md                    # Top-level overview with cross-references
+├── subdirectory-a/
+│   └── README.md               # Directory-specific documentation
+├── subdirectory-b/
+│   └── README.md               # Directory-specific documentation
+└── theory-papers/
+    ├── README.md               # Theory overview
+    ├── category-1/
+    │   └── README.md           # Category-specific documentation
+    └── category-2/
+        └── README.md           # Category-specific documentation
+```
+
+#### 2. **Explicit Cross-References**
+Documentation files must link to each other (creating "documentation imports"):
+
+**Top-level README.md:**
+```markdown
+## Documentation Structure
+- [Implementation A](./subdirectory-a/README.md) - Core algorithms
+- [Implementation B](./subdirectory-b/README.md) - Supporting utilities  
+- [Theory Papers](./theory-papers/README.md) - Theoretical foundations
+
+## Cross-Domain Connections
+- Implementation A ↔ [Theory Category 1](./theory-papers/category-1/README.md)
+- Implementation B ↔ [Theory Category 2](./theory-papers/category-2/README.md)
+```
+
+**Subdirectory README.md:**
+```markdown
+# Implementation A
+
+## Theoretical Foundation
+Based on concepts from [Theory Category 1](../theory-papers/category-1/README.md).
+
+## Related Implementations
+- [Implementation B](../subdirectory-b/README.md) - Complementary approach
+- [Top-level Overview](../README.md) - Complete system context
+```
+
+#### 3. **Theory-Practice Bridge Documentation**
+Explicit mapping between theoretical papers and code implementations:
+```markdown
+## Theory → Code Mapping
+- **Paper Section 2.1** → [algorithm.py](./src/algorithm.py)
+- **Theorem 3** → [optimization.py](./src/optimization.py)
+- **Figure 4** → [visualization.py](./utils/visualization.py)
+```
+
+#### 4. **Why This Matters for ISNE Bootstrap**
+
+Documentation cross-references create **explicit graph edges**:
+- **Co-location edges**: Files in same directory (implicit)
+- **Import edges**: Python import statements (explicit)  
+- **Documentation edges**: Markdown cross-references (explicit)
+- **Semantic edges**: ISNE-discovered relationships (learned)
+
+Without proper documentation cross-references, ISNE can only rely on co-location and imports, missing crucial **conceptual relationships** between directories and abstraction levels.
+
+### 🔧 **Dataset Validation Checklist**
+
+Before running ISNE bootstrap:
+- [ ] Every directory has custom README.md
+- [ ] Top-level documentation links to all subdirectories  
+- [ ] Subdirectory documentation references related directories
+- [ ] Theory papers are explicitly linked to implementations
+- [ ] Cross-domain relationships are documented
+- [ ] Remove irrelevant boilerplate (SECURITY.md, etc.)
+
+**Result**: Rich graph structure with multiple edge types enabling superior ISNE relationship discovery.
 
 ## References
 
