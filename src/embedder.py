@@ -9,11 +9,11 @@ ensuring embedding alignment for theory-practice bridge detection.
 
 import logging
 import numpy as np
-from typing import List, Dict, Any, Union
+from typing import List, Dict, Any, Union, Optional
 
 # Optional transformers import
 try:
-    from transformers import RobertaTokenizer, RobertaModel
+    from transformers import AutoTokenizer, AutoModel  # type: ignore
     import torch
     HAS_TRANSFORMERS = True
 except ImportError:
@@ -30,7 +30,7 @@ class CodeBERTEmbedder:
     making it ideal for creating comparable embeddings across modalities.
     """
     
-    def __init__(self, config: Dict[str, Any] = None):
+    def __init__(self, config: Optional[Dict[str, Any]] = None):
         self.config = config or {}
         
         # Model configuration
@@ -59,8 +59,8 @@ class CodeBERTEmbedder:
                 self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
             
             # Load model and tokenizer
-            self.tokenizer = RobertaTokenizer.from_pretrained(self.model_name)
-            self.model = RobertaModel.from_pretrained(self.model_name)
+            self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
+            self.model = AutoModel.from_pretrained(self.model_name)
             self.model.to(self.device)
             self.model.eval()
             

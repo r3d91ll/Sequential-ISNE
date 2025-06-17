@@ -20,7 +20,6 @@ from typing import List, Dict, Any, Tuple, Optional, Set, TYPE_CHECKING
 from dataclasses import dataclass
 from pathlib import Path
 import json
-import pickle
 from collections import defaultdict
 
 # Type checking imports
@@ -33,7 +32,6 @@ try:
     import torch
     import torch.nn as nn
     import torch.optim as optim
-    from torch.utils.data import Dataset, DataLoader
     HAS_TORCH = True
 except ImportError:
     HAS_TORCH = False
@@ -146,18 +144,18 @@ class SequentialGraph:
         }
         
         # Relationship type distribution
-        rel_type_counts = defaultdict(int)
+        rel_type_counts: Dict[str, int] = defaultdict(int)
         for _, _, data in self.graph.edges(data=True):
             rel_type_counts[data['relationship_type']] += 1
         stats["relationship_distribution"] = dict(rel_type_counts)
         
         # Directory co-location analysis
-        directory_stats = defaultdict(lambda: {"nodes": 0, "internal_edges": 0})
-        for node_id, data in self.graph.nodes(data=True):
+        directory_stats: Dict[str, Dict[str, int]] = defaultdict(lambda: {"nodes": 0, "internal_edges": 0})
+        for _, data in self.graph.nodes(data=True):
             directory = data.get('directory', 'unknown')
             directory_stats[directory]["nodes"] += 1
         
-        for from_id, to_id, edge_data in self.graph.edges(data=True):
+        for from_id, to_id, _ in self.graph.edges(data=True):
             from_dir = self.graph.nodes[from_id].get('directory', 'unknown')
             to_dir = self.graph.nodes[to_id].get('directory', 'unknown')
             if from_dir == to_dir:
@@ -250,9 +248,8 @@ if HAS_TORCH:
             embeddings = self.node_embedding(node_ids)
             return self.hidden(embeddings)
 else:
-    # Fallback for when torch is not available
-    class SimpleISNEModel:
-        pass
+    # Fallback for when torch is not available  
+    SimpleISNEModel = None  # type: ignore[misc,assignment]
 
 
 class SequentialISNE:
@@ -266,7 +263,7 @@ class SequentialISNE:
     def __init__(self, config: Optional[TrainingConfig] = None):
         self.config = config or TrainingConfig()
         self.graph = SequentialGraph()
-        self.model = None
+        self.model: Optional['SimpleISNEModel'] = None
         self.node_to_index: Dict[int, int] = {}  # chunk_id -> model_index mapping
         self.index_to_node: Dict[int, int] = {}  # model_index -> chunk_id mapping
         self.trained_embeddings: Optional[np.ndarray] = None
@@ -516,6 +513,7 @@ class SequentialISNE:
         self.trained_embeddings = self.trained_embeddings / norms
         
         # Verify normalization
+        assert self.trained_embeddings is not None, "Embeddings must be extracted before normalization"
         new_norms = np.linalg.norm(self.trained_embeddings, axis=1)
         logger.info(f"Embedding norms after normalization: min={new_norms.min():.4f}, max={new_norms.max():.4f}, mean={new_norms.mean():.4f}")
         
@@ -523,6 +521,7 @@ class SequentialISNE:
         sample_similarities = []
         for i in range(min(10, num_nodes)):
             for j in range(i+1, min(10, num_nodes)):
+                assert self.trained_embeddings is not None
                 sim = np.dot(self.trained_embeddings[i], self.trained_embeddings[j])
                 sample_similarities.append(sim)
         
@@ -586,6 +585,7 @@ class SequentialISNE:
     
     def _train_epoch(self, training_pairs: List[Tuple[int, int, float]], optimizer, device) -> float:
         """Train for one epoch."""
+        assert self.model is not None, "Model must be initialized before training"
         self.model.train()
         total_loss = 0.0
         
@@ -604,6 +604,7 @@ class SequentialISNE:
     
     def _compute_batch_loss(self, batch: List[Tuple[int, int, float]], device) -> torch.Tensor:
         """Compute ISNE loss with skip-gram objective and negative sampling."""
+        assert self.model is not None, "Model must be initialized for loss computation"
         total_loss = torch.tensor(0.0, device=device, requires_grad=True)
         
         # Get all node indices for negative sampling
@@ -650,6 +651,7 @@ class SequentialISNE:
     
     def _extract_embeddings(self, device) -> None:
         """Extract trained embeddings from the model."""
+        assert self.model is not None, "Model must be initialized before extracting embeddings"
         self.model.eval()
         embeddings = []
         
@@ -787,6 +789,7 @@ class SequentialISNE:
         similar_pairs = []
         
         # Normalize embeddings for cosine similarity
+        assert self.trained_embeddings is not None, "Embeddings must be available for similarity computation"
         norms = np.linalg.norm(self.trained_embeddings, axis=1, keepdims=True)
         normalized_embeddings = self.trained_embeddings / norms
         
@@ -835,7 +838,6 @@ if __name__ == "__main__":
     
     # Demo Sequential-ISNE training
     from streaming_processor import StreamingChunkProcessor
-    from embeddings import EmbeddingManager, MockEmbeddingProvider
     import tempfile
     
     # Create sample test files
@@ -866,9 +868,9 @@ if __name__ == "__main__":
         
         print(f"Generated {len(chunks)} chunks and {len(relationships)} relationships")
         
-        # Add semantic embeddings
-        embedding_manager = EmbeddingManager(MockEmbeddingProvider())
-        embedding_manager.embed_chunk_contents(chunks)
+        # Add semantic embeddings (disabled - missing dependencies)
+        # embedding_manager = EmbeddingManager(MockEmbeddingProvider()) 
+        # embedding_manager.embed_chunk_contents(chunks)
         
         # Train Sequential-ISNE
         config = TrainingConfig(epochs=20, embedding_dim=128)

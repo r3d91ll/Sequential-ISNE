@@ -4,9 +4,11 @@
 
 This guide provides step-by-step instructions for preparing datasets that maximize ISNE bootstrap effectiveness through proper documentation cross-reference structure.
 
+***NOTE: this methodology is intended for code bases and was tested extensivly on Python codebases***
+
 ## 🎯 Core Principle
 
-**Documentation Cross-References = Explicit Graph Edges**
+***Documentation Cross-References = Explicit Graph Edges***
 
 Just as Python imports create explicit dependencies between modules, markdown cross-references create explicit semantic relationships between directories and abstraction levels.
 
@@ -15,11 +17,13 @@ Just as Python imports create explicit dependencies between modules, markdown cr
 ### Step 1: Audit Existing Documentation
 
 **Scan your dataset for existing documentation:**
+
 ```bash
 find /path/to/dataset -name "*.md" -o -name "*.txt" | head -20
 ```
 
 **Identify gaps:**
+
 - Directories without README.md files
 - Documentation without cross-references
 - Isolated theory papers or implementations
@@ -28,7 +32,8 @@ find /path/to/dataset -name "*.md" -o -name "*.txt" | head -20
 
 **For each directory, create a README.md that includes:**
 
-#### Template for Implementation Directories:
+#### Template for Implementation Directories
+
 ```markdown
 # [Directory Name]
 
@@ -54,7 +59,8 @@ This implementation is based on:
 - Depends on: [Lower-level Utilities](../utilities/README.md)
 ```
 
-#### Template for Theory Paper Directories:
+#### Template for Theory Paper Directories
+
 ```markdown
 # [Theory Category Name]
 
@@ -123,6 +129,7 @@ These theoretical concepts are implemented in:
 ### Step 4: Implement Cross-Reference Links
 
 **Use relative paths for robustness:**
+
 ```markdown
 # Good - Relative paths
 [Related Implementation](../other-dir/README.md)
@@ -133,6 +140,7 @@ These theoretical concepts are implemented in:
 ```
 
 **Create bidirectional references:**
+
 - Theory papers reference implementations
 - Implementations reference theory papers
 - Related implementations reference each other
@@ -141,6 +149,7 @@ These theoretical concepts are implemented in:
 ### Step 5: Remove Irrelevant Content
 
 **Identify and remove files that pollute the semantic space:**
+
 ```bash
 # Find potential boilerplate files
 find /path/to/dataset -name "SECURITY.md" -o -name "CODE_OF_CONDUCT.md" -o -name "CONTRIBUTING.md"
@@ -150,6 +159,7 @@ rm dataset/SECURITY.md dataset/CODE_OF_CONDUCT.md
 ```
 
 **Keep only files that contribute to research understanding:**
+
 - Theory papers (PDFs)
 - Implementation code (.py, .js, etc.)
 - Custom documentation (README.md with cross-references)
@@ -158,6 +168,7 @@ rm dataset/SECURITY.md dataset/CODE_OF_CONDUCT.md
 ### Step 6: Validate Cross-Reference Structure
 
 **Test the documentation network:**
+
 ```bash
 # Check that all referenced files exist
 python validate_documentation_links.py /path/to/dataset
@@ -167,6 +178,7 @@ grep -r "\[.*\](\..*\.md)" /path/to/dataset
 ```
 
 **Verification checklist:**
+
 - [ ] Every directory has custom README.md
 - [ ] Top-level documentation links to all major subdirectories
 - [ ] Subdirectories reference related directories
@@ -177,13 +189,15 @@ grep -r "\[.*\](\..*\.md)" /path/to/dataset
 
 ## 🔬 Expected ISNE Bootstrap Improvements
 
-### Graph Edge Types Created:
+### Graph Edge Types Created
+
 1. **Co-location edges** (automatic): Files in same directory
 2. **Import edges** (automatic): Python imports between files
 3. **Documentation edges** (explicit): Markdown cross-references
 4. **Semantic edges** (learned): ISNE-discovered relationships
 
-### Validation Results:
+### Validation Results
+
 - **Before proper documentation**: Limited to co-location + imports
 - **After cross-references**: 2-3x more initial edges for ISNE training
 - **Enhanced discovery**: Better theory-practice bridge detection
@@ -191,6 +205,7 @@ grep -r "\[.*\](\..*\.md)" /path/to/dataset
 ## 🛠 Tools and Scripts
 
 ### Documentation Link Validator (Optional)
+
 ```python
 #!/usr/bin/env python3
 """Validate documentation cross-references in dataset."""
@@ -215,6 +230,7 @@ if __name__ == "__main__":
 ## ✅ Success Criteria
 
 A properly prepared dataset will show:
+
 - **Rich initial graph structure** with multiple edge types
 - **Strong theory-practice bridge detection** by ISNE
 - **Cross-modal relationships** between documentation, theory, and code

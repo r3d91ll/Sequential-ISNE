@@ -71,7 +71,7 @@ class DirectoryGraph:
         
         return node_id
     
-    def bootstrap_from_directory(self, root_path: Path, file_contents: Dict[str, str] = None) -> None:
+    def bootstrap_from_directory(self, root_path: Path, file_contents: Optional[Dict[str, str]] = None) -> None:
         """
         Bootstrap initial graph from directory structure.
         
@@ -324,14 +324,14 @@ class DirectoryGraph:
         }
         
         # File type distribution
-        file_types = defaultdict(int)
+        file_types: Dict[str, int] = defaultdict(int)
         for node_id in self.graph.nodes():
             file_type = self.graph.nodes[node_id].get('file_type', 'unknown')
             file_types[file_type] += 1
         stats['file_type_distribution'] = dict(file_types)
         
         # Directory distribution
-        directories = defaultdict(int)
+        directories: Dict[str, int] = defaultdict(int)
         for node_id in self.graph.nodes():
             directory = self.graph.nodes[node_id].get('directory', 'unknown')
             directories[directory] += 1

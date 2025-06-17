@@ -25,6 +25,7 @@ transformers = "^4.52.4"
 tokenizers = "^0.21.1"
 scipy = "^1.15.3"
 pyyaml = "^6.0.2"
+types-networkx = "^3.5.0.20250610"
 
 [tool.poetry.extras]
 gpu = ["torch", "sentence-transformers", "faiss-cpu"]
@@ -36,6 +37,16 @@ pytest = "^7.0.0"
 pytest-cov = "^4.0.0"
 black = "^23.0.0"
 isort = "^5.12.0"
+mypy = "^1.16.1"
+types-networkx = "^3.5.0.20250610"
+pandas-stubs = "^2.2.3.250527"
+types-pyyaml = "^6.0.12.20250516"
+types-pygments = "^2.19.0.20250516"
+types-protobuf = "^6.30.2.20250516"
+types-psutil = "^7.0.0.20250601"
+types-requests = "^2.32.4.20250611"
+types-tensorflow = "^2.18.0.20250516"
+types-transformers = "^0.1.0"
 
 [build-system]
 requires = ["poetry-core"]

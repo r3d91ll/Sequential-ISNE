@@ -1,561 +1,546 @@
 #!/usr/bin/env python3
 """
-Sequential-ISNE Complete Pipeline Demo
+Sequential-ISNE Demo
 
-Demonstrates the complete Sequential-ISNE pipeline:
-1. Data normalization with Docling
-2. Unified chunking (Chonky + AST)
-3. CodeBERT embedding for both text and code
-4. Sequential-ISNE training
-5. Theory-practice bridge detection
+User-friendly demonstration of Sequential-ISNE that can be pointed at any directory.
+This will bootstrap a knowledge graph from the directory structure and enhance it
+using ISNE to discover new relationships.
 
-Usage:
-    python demo.py [data_directory]
-    
-Example:
-    python demo.py /path/to/dataset
+Usage: python demo.py /path/to/directory [--epochs 20] [--embedding-dim 128]
+
+Examples:
+    python demo.py .                           # Test current directory
+    python demo.py ~/my-project --epochs 30   # Test with more training
+    python demo.py /path/to/code --embedding-dim 256  # Larger embeddings
 """
 
 import argparse
-import logging
 import json
-import yaml
+import logging
+import time
+import networkx as nx
 from pathlib import Path
+from typing import Dict, List, Any, Tuple
 from datetime import datetime
-from typing import Dict, List, Any
 
-# Import our simplified components
-from src.data_normalizer import DataNormalizer
-from chunker import UnifiedChunker
-from embedder import CodeBERTEmbedder
-from directory_graph import DirectoryGraph
+from src.directory_graph import DirectoryGraph
 from src.sequential_isne import SequentialISNE, TrainingConfig
-from src.streaming_processor import StreamingChunk, ChunkMetadata, StreamingChunkProcessor
+
+
+def analyze_graph(graph: nx.Graph, name: str) -> Dict[str, float]:
+    """Analyze graph and print metrics."""
+    if not graph.nodes:
+        return {}
+    
+    metrics = {
+        "nodes": graph.number_of_nodes(),
+        "edges": graph.number_of_edges(),
+        "density": nx.density(graph),
+        "avg_clustering": nx.average_clustering(graph) if not graph.is_directed() else nx.average_clustering(graph.to_undirected()),
+        "connected_components": nx.number_connected_components(graph) if not graph.is_directed() else nx.number_weakly_connected_components(graph)
+    }
+    
+    print(f"\n📊 {name} Metrics:")
+    for key, value in metrics.items():
+        print(f"   {key}: {value:.3f}")
+    
+    return metrics
+
+
+def find_theory_practice_bridges(graph: nx.Graph, directory_graph: DirectoryGraph) -> List[Tuple[str, str]]:
+    """Find connections between documentation and code files."""
+    bridges = []
+    
+    for node_a, node_b in graph.edges():
+        type_a = graph.nodes[node_a].get('file_type')
+        type_b = graph.nodes[node_b].get('file_type')
+        
+        if type_a != type_b:  # Cross-modal connection
+            file_a = directory_graph.node_to_file[node_a]
+            file_b = directory_graph.node_to_file[node_b]
+            bridges.append((Path(file_a).name, Path(file_b).name))
+    
+    return bridges
+
+
+# Set up logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(),
+        logging.FileHandler(f'demo_{datetime.now().strftime("%Y%m%d_%H%M%S")}.log')
+    ]
+)
+logger = logging.getLogger(__name__)
 
 
 class SequentialISNEDemo:
-    """
-    Complete Sequential-ISNE demonstration pipeline.
-    Shows data normalization contribution and ISNE training.
-    """
+    """User-friendly Sequential-ISNE demonstration."""
     
-    def __init__(self, config_path: str = "config.yaml"):
-        # Load configuration
-        self.config = self._load_config(config_path)
-        self.experiment_name = f"sequential-isne-demo-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
-        
-        # Setup logging
-        self._setup_logging()
-        self.logger = logging.getLogger(__name__)
-        
-        # Initialize components
-        self.normalizer = DataNormalizer()
-        self.chunker = UnifiedChunker(self.config['chunking'])
-        self.embedder = CodeBERTEmbedder(self.config['embedding'])
-        
-        # Training configuration
-        self.training_config = TrainingConfig(
-            embedding_dim=self.config['model']['embedding_dim'],
-            hidden_dim=self.config['model']['hidden_dim'],
-            learning_rate=self.config['model']['learning_rate'],
-            epochs=self.config['model']['epochs'],
-            batch_size=self.config['model']['batch_size'],
-            negative_samples=self.config['model']['negative_samples'],
-            device=self.config['model']['device']
-        )
-        
-        self.logger.info(f"Sequential-ISNE Demo initialized: {self.experiment_name}")
-        self.logger.info(f"Configuration loaded from: {config_path}")
-    
-    def _load_config(self, config_path: str) -> Dict[str, Any]:
-        """Load configuration from YAML file."""
-        try:
-            with open(config_path, 'r') as f:
-                config = yaml.safe_load(f)
-            return config
-        except Exception as e:
-            print(f"Warning: Could not load config from {config_path}: {e}")
-            return self._default_config()
-    
-    def _default_config(self) -> Dict[str, Any]:
-        """Return default configuration if file loading fails."""
-        return {
-            'chunking': {'text_chunk_size': 512, 'text_overlap': 50},
-            'embedding': {'model_name': 'microsoft/codebert-base', 'max_length': 512, 'normalize': True},
-            'model': {
-                'embedding_dim': 768, 'hidden_dim': 256, 'learning_rate': 0.001,
-                'epochs': 5, 'batch_size': 16, 'negative_samples': 5, 'device': 'auto'
+    def __init__(self, target_directory: Path, epochs: int = 20, embedding_dim: int = 128):
+        self.target_directory = target_directory
+        self.epochs = epochs
+        self.embedding_dim = embedding_dim
+        self.start_time = time.time()
+        self.results: Dict[str, Any] = {
+            'test_type': 'user_demo',
+            'started_at': datetime.now().isoformat(),
+            'target_directory': str(target_directory),
+            'parameters': {
+                'epochs': epochs,
+                'embedding_dim': embedding_dim
             },
-            'bridges': {
-                'theory_keywords': ['algorithm', 'model', 'graph', 'network', 'embedding'],
-                'similarity_threshold': 0.7, 'max_sample_chunks': 50
-            },
-            'output': {'save_results': True, 'results_directory': 'experiments'}
+            'phases': {},
+            'final_metrics': {}
         }
-    
-    def _setup_logging(self):
-        """Setup logging configuration."""
-        log_level = getattr(logging, self.config.get('logging', {}).get('level', 'INFO'))
         
-        logging.basicConfig(
-            level=log_level,
-            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-            handlers=[logging.StreamHandler()]
-        )
-        
-        # Save logs if configured
-        if self.config.get('logging', {}).get('save_logs', False):
-            log_dir = Path(self.config.get('logging', {}).get('log_directory', 'logs'))
-            log_dir.mkdir(exist_ok=True)
-            
-            log_file = log_dir / f"{self.experiment_name}.log"
-            file_handler = logging.FileHandler(log_file)
-            file_handler.setFormatter(logging.Formatter(
-                '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-            ))
-            logging.getLogger().addHandler(file_handler)
-    
-    def run_complete_pipeline(self, data_directory: str) -> Dict[str, Any]:
-        """
-        Run the complete Sequential-ISNE pipeline on a dataset.
-        
-        Args:
-            data_directory: Path to directory containing PDFs, code, and documents
-            
-        Returns:
-            Complete results dictionary with all metrics and outputs
-        """
-        data_path = Path(data_directory)
-        if not data_path.exists():
-            raise ValueError(f"Data directory not found: {data_directory}")
-        
-        print("=" * 80)
-        print("🚀 SEQUENTIAL-ISNE COMPLETE PIPELINE DEMONSTRATION")
-        print("=" * 80)
-        print(f"📁 Dataset: {data_directory}")
-        print(f"🔬 Experiment: {self.experiment_name}")
-        print(f"⏰ Started: {datetime.now().isoformat()}")
+        print("🚀 Sequential-ISNE Demo")
+        print("=" * 60)
+        print(f"📁 Target Directory: {target_directory}")
+        print(f"🎯 Training Epochs: {epochs}")
+        print(f"📊 Embedding Dimension: {embedding_dim}")
+        print(f"⏰ Started: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         print()
-        
-        # Phase 1: Data Normalization with Docling
-        print("📊 PHASE 1: Data Normalization (Docling)")
-        print("-" * 50)
-        normalized_docs = self._normalize_data(data_directory)
-        
-        # Phase 2: Unified Chunking (Chonky + AST)
-        print("\n🔗 PHASE 2: Unified Chunking (Chonky + AST)")
-        print("-" * 50)
-        all_chunks = self._chunk_documents(normalized_docs)
-        
-        # Phase 3: CodeBERT Embedding
-        print("\n🧠 PHASE 3: CodeBERT Embedding (Text + Code)")
-        print("-" * 50)
-        embedded_chunks = self._embed_chunks(all_chunks)
-        
-        # Phase 4: Theory-Practice Bridge Detection
-        print("\n🌉 PHASE 4: Theory-Practice Bridge Detection")
-        print("-" * 50)
-        bridges = self._detect_bridges(embedded_chunks)
-        
-        # Phase 5: Sequential-ISNE Training
-        print("\n🎯 PHASE 5: Sequential-ISNE Training")
-        print("-" * 50)
-        model, training_results = self._train_model(embedded_chunks)
-        
-        # Phase 6: Validation and Analysis
-        print("\n🔬 PHASE 6: Model Validation")
-        print("-" * 50)
-        validation_results = self._validate_model(model, embedded_chunks, bridges)
-        
-        # Phase 7: Results Compilation
-        print("\n📊 PHASE 7: Results Summary")
-        print("-" * 50)
-        results = self._compile_results(
-            normalized_docs, all_chunks, embedded_chunks, 
-            bridges, training_results, validation_results
-        )
-        
-        # Save results
-        if self.config.get('output', {}).get('save_results', True):
-            self._save_results(results)
-        
-        print("\n🎉 SEQUENTIAL-ISNE PIPELINE COMPLETE!")
-        self._display_summary(results)
-        
-        return results
     
-    def _normalize_data(self, data_directory: str) -> List[Dict[str, Any]]:
-        """Phase 1: Normalize documents using Docling."""
-        print("   🔄 Processing documents with Docling...")
+    def run_demo(self) -> Dict[str, Any]:
+        """Run the complete Sequential-ISNE demonstration."""
         
-        normalized_docs = self.normalizer.normalize_directory(
-            data_directory, 
-            recursive=self.config.get('normalization', {}).get('recursive', True)
-        )
+        # Phase 1: Analyze target directory
+        self._phase_1_directory_analysis()
         
-        successful_docs = [doc for doc in normalized_docs if not doc['error']]
-        failed_docs = [doc for doc in normalized_docs if doc['error']]
+        # Phase 2: Bootstrap directory graph
+        self._phase_2_bootstrap_graph()
         
-        print(f"   ✅ Processed: {len(successful_docs)}/{len(normalized_docs)} documents")
-        print(f"   📄 File types: {self._count_file_types(successful_docs)}")
+        # Phase 3: Train ISNE embeddings
+        self._phase_3_train_isne()
         
-        if failed_docs:
-            print(f"   ⚠️  Failed: {len(failed_docs)} documents")
+        # Phase 4: Generate enhanced graph
+        self._phase_4_enhance_graph()
         
-        return successful_docs
+        # Phase 5: Analyze results
+        self._phase_5_analyze_results()
+        
+        # Phase 6: Export results
+        self._phase_6_export_results()
+        
+        return self.results
     
-    def _chunk_documents(self, normalized_docs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Phase 2: Chunk documents using unified chunker."""
-        print("   🔄 Chunking with Chonky (text) and AST (Python)...")
+    def _phase_1_directory_analysis(self):
+        """Phase 1: Analyze the target directory structure."""
+        print("🔍 PHASE 1: Directory Analysis")
+        print("-" * 40)
         
-        all_chunks = []
-        python_chunks = 0
-        text_chunks = 0
+        phase_start = time.time()
         
-        for doc in normalized_docs:
-            file_type = doc['source']['file_type']
-            # Use raw content for chunking, processed content is already parsed
-            content = doc['content']['raw_content'] or doc['content']['processed_content']
-            source_file = doc['source']['file_path']
-            
-            # Skip if no content or error
-            if not content or doc.get('error'):
-                continue
-            
-            # For text content, ensure it's a string
-            if isinstance(content, dict):
-                # This is parsed content, skip for now or convert
-                continue
-            
-            # Chunk based on type
-            chunks = self.chunker.chunk_content(content, file_type, source_file)
-            
-            # Add document metadata to chunks
-            for chunk in chunks:
-                chunk['document_metadata'] = doc['source']
-                chunk['chunk_id'] = len(all_chunks)  # Global sequential ID
-                all_chunks.append(chunk)
+        # Count files by type
+        file_counts = {
+            'python': 0, 'docs': 0, 'configs': 0, 'other': 0, 'total': 0
+        }
+        
+        all_files = []
+        for file_path in self.target_directory.rglob('*'):
+            if file_path.is_file() and not file_path.name.startswith('.'):
+                all_files.append(file_path)
+                file_counts['total'] += 1
                 
-                if file_type == 'python':
-                    python_chunks += 1
+                if file_path.suffix == '.py':
+                    file_counts['python'] += 1
+                elif file_path.suffix in {'.md', '.txt', '.rst', '.pdf'}:
+                    file_counts['docs'] += 1
+                elif file_path.suffix in {'.json', '.yaml', '.yml', '.toml'}:
+                    file_counts['configs'] += 1
                 else:
-                    text_chunks += 1
+                    file_counts['other'] += 1
         
-        print(f"   📊 Total chunks: {len(all_chunks)}")
-        print(f"   🐍 Python chunks: {python_chunks}")
-        print(f"   📄 Text chunks: {text_chunks}")
-        print(f"   🌉 Bridge potential: {python_chunks * text_chunks}")
+        # Calculate directory depth
+        if all_files:
+            max_depth = max(len(f.relative_to(self.target_directory).parts) for f in all_files)
+        else:
+            max_depth = 0
         
-        # Show chunking statistics
-        stats = self.chunker.get_chunking_stats(all_chunks)
-        print(f"   📏 Avg chunk length: {stats['avg_chunk_length']:.0f} chars")
-        print(f"   🔧 Chunking methods: {stats['chunking_methods']}")
+        phase_time = time.time() - phase_start
         
-        return all_chunks
-    
-    def _embed_chunks(self, chunks: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Phase 3: Generate CodeBERT embeddings."""
-        print("   🔄 Generating CodeBERT embeddings...")
+        print(f"   📊 Total files: {file_counts['total']}")
+        print(f"   🐍 Python files: {file_counts['python']}")
+        print(f"   📄 Documentation: {file_counts['docs']}")
+        print(f"   ⚙️  Config files: {file_counts['configs']}")
+        print(f"   📁 Max depth: {max_depth}")
+        print(f"   🕒 Analysis time: {phase_time:.1f}s")
         
-        # Extract texts for embedding
-        texts = [chunk['content'] for chunk in chunks]
-        
-        # Generate embeddings using CodeBERT
-        embeddings = self.embedder.embed_batch(texts)
-        
-        # Add embeddings to chunks
-        embedded_chunks = []
-        for chunk, embedding in zip(chunks, embeddings):
-            chunk_copy = chunk.copy()
-            chunk_copy['embedding'] = embedding
-            chunk_copy['embedding_info'] = self.embedder.get_embedding_info()
-            embedded_chunks.append(chunk_copy)
-        
-        print(f"   ✅ Generated {len(embeddings)} CodeBERT embeddings")
-        print(f"   📏 Embedding dimension: {len(embeddings[0]) if embeddings else 0}")
-        print(f"   🤖 Model: {self.embedder.model_name}")
-        
-        return embedded_chunks
-    
-    def _detect_bridges(self, embedded_chunks: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Phase 4: Detect theory-practice bridges using directory-informed graph."""
-        print("   🔄 Building directory-informed graph for bridge detection...")
-        
-        # Build directory graph from chunks
-        directory_graph = DirectoryGraph()
-        
-        # Create file contents mapping
-        file_contents = {}
-        node_to_chunk = {}
-        
-        for chunk in embedded_chunks:
-            file_path = chunk['document_metadata']['file_path']
-            content = chunk['content']
-            
-            # Accumulate content for files (chunks belong to same file)
-            if file_path not in file_contents:
-                file_contents[file_path] = ""
-            file_contents[file_path] += content + "\n"
-        
-        # Bootstrap graph from directory structure
-        data_root = Path(list(file_contents.keys())[0]).parents[2]  # Go up to dataset root
-        directory_graph.bootstrap_from_directory(data_root, file_contents)
-        
-        # Add semantic similarity edges using embeddings
-        if embedded_chunks:
-            embeddings = {}
-            for chunk in embedded_chunks:
-                file_path = chunk['document_metadata']['file_path']
-                if file_path in directory_graph.file_to_node:
-                    node_id = directory_graph.file_to_node[file_path]
-                    if 'embedding' in chunk:
-                        embeddings[node_id] = chunk['embedding']
-            
-            if embeddings:
-                directory_graph.extend_with_semantic_similarity(embeddings, threshold=0.7)
-        
-        # Find theory-practice bridges using graph structure
-        bridges = directory_graph.find_theory_practice_bridges()
-        
-        print(f"   ✅ Detected {len(bridges)} theory-practice bridges from directory graph")
-        print(f"   📊 Graph: {directory_graph.graph.number_of_nodes()} nodes, {directory_graph.graph.number_of_edges()} edges")
-        
-        # Show top bridges
-        for i, bridge in enumerate(bridges[:3]):
-            print(f"      {i+1}. {Path(bridge['theory_file']).name} ↔ {Path(bridge['practice_file']).name} "
-                  f"(strength: {bridge['strength']:.2f}, type: {bridge['connection_type']})")
-        
-        # Convert to format expected by rest of pipeline
-        converted_bridges = []
-        for bridge in bridges:
-            converted_bridges.append({
-                'text_file': Path(bridge['theory_file']).name,
-                'python_file': Path(bridge['practice_file']).name,
-                'text_chunk_id': bridge['theory_node'],
-                'python_chunk_id': bridge['practice_node'],
-                'shared_concepts': [bridge['connection_type']],
-                'strength': bridge['strength'],
-                'bridge_type': 'directory_informed'
-            })
-        
-        return converted_bridges
-    
-    def _train_model(self, embedded_chunks: List[Dict[str, Any]]) -> tuple:
-        """Phase 5: Train Sequential-ISNE model using directory-informed graph."""
-        print("   🔄 Training Sequential-ISNE model with directory-informed graph...")
-        
-        # Build directory graph (reuse from bridge detection)
-        directory_graph = DirectoryGraph()
-        
-        # Create file contents mapping
-        file_contents = {}
-        for chunk in embedded_chunks:
-            file_path = chunk['document_metadata']['file_path']
-            content = chunk['content']
-            
-            # Accumulate content for files (chunks belong to same file)
-            if file_path not in file_contents:
-                file_contents[file_path] = ""
-            file_contents[file_path] += content + "\n"
-        
-        # Bootstrap graph from directory structure
-        data_root = Path(list(file_contents.keys())[0]).parents[2]  # Go up to dataset root
-        directory_graph.bootstrap_from_directory(data_root, file_contents)
-        
-        # Add semantic similarity edges using embeddings
-        if embedded_chunks:
-            embeddings = {}
-            for chunk in embedded_chunks:
-                file_path = chunk['document_metadata']['file_path']
-                if file_path in directory_graph.file_to_node:
-                    node_id = directory_graph.file_to_node[file_path]
-                    if 'embedding' in chunk:
-                        embeddings[node_id] = chunk['embedding']
-            
-            if embeddings:
-                directory_graph.extend_with_semantic_similarity(embeddings, threshold=0.7)
-        
-        print(f"   📊 Directory graph: {directory_graph.graph.number_of_nodes()} nodes, {directory_graph.graph.number_of_edges()} edges")
-        
-        # Initialize and train model with directory-informed graph
-        model = SequentialISNE(self.training_config)
-        model.build_graph_from_directory_graph(directory_graph, embedded_chunks)
-        
-        print(f"   🏃 Training on {len(embedded_chunks)} chunks for {self.training_config.epochs} epochs...")
-        training_results = model.train_embeddings()
-        
-        print(f"   ✅ Training completed")
-        print(f"   📉 Final loss: {training_results.get('final_loss', 'N/A'):.6f}")
-        print(f"   🎯 Epochs: {training_results.get('epochs_completed', 'N/A')}")
-        
-        return model, training_results
-    
-    def _validate_model(self, model, embedded_chunks: List[Dict[str, Any]], bridges: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Phase 6: Validate trained model."""
-        print("   🔄 Validating Sequential-ISNE model...")
-        
-        validation_results = {}
-        
-        try:
-            # Basic embedding quality
-            if model.trained_embeddings is not None:
-                import numpy as np
-                from sklearn.metrics.pairwise import cosine_similarity
-                
-                embeddings = model.trained_embeddings
-                pairwise_sims = cosine_similarity(embeddings)
-                avg_similarity = np.mean(pairwise_sims[np.triu_indices_from(pairwise_sims, k=1)])
-                embedding_quality = 1.0 - min(avg_similarity, 0.95)
-                
-                validation_results['embedding_quality'] = embedding_quality
-                validation_results['avg_embedding_similarity'] = avg_similarity
-                
-                print(f"   📊 Embedding quality: {embedding_quality:.3f}")
-                print(f"   🎯 Avg similarity: {avg_similarity:.3f}")
-            
-            # Graph connectivity
-            if hasattr(model, 'graph') and model.graph.graph.number_of_nodes() > 0:
-                import networkx as nx
-                
-                graph = model.graph.graph
-                is_connected = nx.is_weakly_connected(graph)
-                avg_clustering = nx.average_clustering(graph.to_undirected())
-                density = nx.density(graph)
-                
-                validation_results['graph_connected'] = is_connected
-                validation_results['graph_clustering'] = avg_clustering
-                validation_results['graph_density'] = density
-                
-                print(f"   🌐 Graph connected: {is_connected}")
-                print(f"   🔗 Clustering coeff: {avg_clustering:.3f}")
-                print(f"   📊 Density: {density:.3f}")
-            
-            # Bridge validation
-            validation_results['bridges_detected'] = len(bridges)
-            validation_results['bridge_validation'] = len(bridges) > 0
-            
-            print(f"   🌉 Bridges detected: {len(bridges)}")
-            
-        except Exception as e:
-            print(f"   ⚠️ Validation error: {e}")
-            validation_results['validation_error'] = str(e)
-        
-        return validation_results
-    
-    def _compile_results(self, normalized_docs, chunks, embedded_chunks, bridges, training_results, validation_results) -> Dict[str, Any]:
-        """Phase 7: Compile complete results."""
-        return {
-            'experiment_name': self.experiment_name,
-            'timestamp': datetime.now().isoformat(),
-            'config': self.config,
-            'data_normalization': {
-                'total_documents': len(normalized_docs),
-                'file_types': self._count_file_types(normalized_docs),
-                'normalization_method': 'docling'
-            },
-            'chunking': {
-                'total_chunks': len(chunks),
-                'chunking_stats': self.chunker.get_chunking_stats(chunks),
-                'chunking_methods': ['chonky_text', 'ast_python']
-            },
-            'embedding': {
-                'total_embeddings': len(embedded_chunks),
-                'embedding_info': self.embedder.get_embedding_info(),
-                'model_name': self.embedder.model_name
-            },
-            'bridges': {
-                'total_detected': len(bridges),
-                'detection_methods': ['keyword_matching', 'semantic_similarity'],
-                'top_bridges': bridges[:5]
-            },
-            'training': training_results,
-            'validation': validation_results,
-            'pipeline_success': True
+        self.results['phases']['phase_1'] = {
+            'duration': phase_time,
+            'file_counts': file_counts,
+            'max_depth': max_depth,
+            'total_files_found': len(all_files)
         }
     
-    def _save_results(self, results: Dict[str, Any]):
-        """Save results to file."""
-        output_dir = Path(self.config.get('output', {}).get('results_directory', 'experiments'))
-        output_dir.mkdir(parents=True, exist_ok=True)
+    def _phase_2_bootstrap_graph(self):
+        """Phase 2: Bootstrap knowledge graph from directory structure."""
+        print(f"\n🏗️  PHASE 2: Bootstrap Knowledge Graph")
+        print("-" * 40)
         
-        results_file = output_dir / f"{self.experiment_name}_results.json"
+        phase_start = time.time()
         
-        # Convert numpy arrays to lists for JSON serialization
-        def convert_numpy(obj):
-            if hasattr(obj, 'tolist'):
-                return obj.tolist()
-            return obj
+        print("   🔄 Creating graph from directory structure...")
         
+        # Create directory graph
+        self.directory_graph = DirectoryGraph()
+        self.directory_graph.bootstrap_from_directory(self.target_directory)
+        basic_metrics = analyze_graph(self.directory_graph.graph, "Directory Graph")
+        
+        phase_time = time.time() - phase_start
+        
+        print(f"   ✅ Graph created!")
+        print(f"   📊 Nodes: {basic_metrics.get('nodes', 0)}")
+        print(f"   🔗 Edges: {basic_metrics.get('edges', 0)}")
+        print(f"   📈 Density: {basic_metrics.get('density', 0):.4f}")
+        print(f"   🕒 Bootstrap time: {phase_time:.1f}s")
+        
+        self.results['phases']['phase_2'] = {
+            'duration': phase_time,
+            'basic_metrics': basic_metrics
+        }
+    
+    def _phase_3_train_isne(self):
+        """Phase 3: Train ISNE embeddings on the knowledge graph."""
+        print(f"\n🎯 PHASE 3: Train ISNE Embeddings")
+        print("-" * 40)
+        
+        phase_start = time.time()
+        
+        print(f"   🔄 Training ISNE with {self.epochs} epochs...")
+        
+        # Check GPU availability
         try:
-            with open(results_file, 'w') as f:
-                json.dump(results, f, indent=2, default=convert_numpy)
-            print(f"   💾 Results saved: {results_file}")
-        except Exception as e:
-            print(f"   ⚠️ Failed to save results: {e}")
+            import torch
+            if torch.cuda.is_available():
+                gpu_name = torch.cuda.get_device_name(0)
+                gpu_memory = torch.cuda.get_device_properties(0).total_memory / 1e9
+                print(f"   🚀 GPU detected: {gpu_name} ({gpu_memory:.1f}GB)")
+            else:
+                print("   💻 Using CPU (GPU not available)")
+        except ImportError:
+            print("   ⚠️  PyTorch not available, using fallback training")
+        
+        # Configure Sequential-ISNE
+        config = TrainingConfig(
+            embedding_dim=self.embedding_dim,
+            epochs=self.epochs,
+            batch_size=32,
+            learning_rate=0.001,
+            device="auto"
+        )
+        self.isne = SequentialISNE(config)
+        
+        print(f"   🏃 Training on {self.directory_graph.graph.number_of_nodes()} nodes...")
+        
+        # Convert directory graph to chunks
+        chunks = self._create_chunks_from_directory_graph()
+        
+        # Build graph and train
+        training_start = time.time()
+        self.isne.build_graph_from_directory_graph(self.directory_graph, chunks)
+        training_results = self.isne.train_embeddings()
+        training_time = time.time() - training_start
+        
+        # Save the trained model
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        model_path = f"./models/demo_isne_model_{timestamp}.json"
+        self.isne.save_model(model_path)
+        print(f"   💾 Model saved to: {model_path}")
+        
+        phase_time = time.time() - phase_start
+        
+        print(f"   ✅ Training complete!")
+        print(f"   📊 Nodes trained: {training_results.get('nodes_trained', 0)}")
+        print(f"   🔄 Epochs completed: {training_results.get('epochs_completed', 0)}")
+        print(f"   🕒 Training time: {training_time:.1f}s")
+        
+        self.results['phases']['phase_3'] = {
+            'duration': phase_time,
+            'training_time': training_time,
+            'training_results': training_results
+        }
     
-    def _display_summary(self, results: Dict[str, Any]):
-        """Display final summary."""
-        print(f"   📊 Documents: {results['data_normalization']['total_documents']}")
-        print(f"   🔗 Chunks: {results['chunking']['total_chunks']}")
-        print(f"   🧠 Embeddings: {results['embedding']['total_embeddings']}")
-        print(f"   🌉 Bridges: {results['bridges']['total_detected']}")
-        print(f"   🎯 Training epochs: {results['training'].get('epochs_completed', 'N/A')}")
-        print(f"   ✅ Pipeline: {'SUCCESS' if results['pipeline_success'] else 'FAILED'}")
+    def _phase_4_enhance_graph(self):
+        """Phase 4: Generate enhanced graph with ISNE discoveries."""
+        print(f"\n✨ PHASE 4: Enhance Graph with ISNE")
+        print("-" * 40)
+        
+        phase_start = time.time()
+        
+        print("   🔄 Finding new relationships with ISNE...")
+        
+        # Create enhanced graph using ISNE similarity discoveries
+        self.enhanced_graph = self._create_enhanced_graph_from_isne()
+        enhanced_metrics = analyze_graph(self.enhanced_graph, "ISNE-Enhanced Graph")
+        
+        phase_time = time.time() - phase_start
+        
+        basic_edges = self.directory_graph.graph.number_of_edges()
+        enhanced_edges = self.enhanced_graph.number_of_edges()
+        improvement = enhanced_edges - basic_edges
+        improvement_pct = (improvement / basic_edges) * 100 if basic_edges > 0 else 0
+        
+        print(f"   ✅ Enhancement complete!")
+        print(f"   📊 Original edges: {basic_edges}")
+        print(f"   📊 Enhanced edges: {enhanced_edges}")
+        print(f"   📈 New relationships: +{improvement} (+{improvement_pct:.1f}%)")
+        print(f"   🕒 Enhancement time: {phase_time:.1f}s")
+        
+        self.results['phases']['phase_4'] = {
+            'duration': phase_time,
+            'enhanced_metrics': enhanced_metrics,
+            'improvement': {
+                'new_edges': improvement,
+                'improvement_percentage': improvement_pct
+            }
+        }
     
-    def _count_file_types(self, docs: List[Dict[str, Any]]) -> Dict[str, int]:
-        """Count documents by file type."""
-        counts = {}
-        for doc in docs:
-            file_type = doc['source']['file_type']
-            counts[file_type] = counts.get(file_type, 0) + 1
-        return counts
+    def _phase_5_analyze_results(self):
+        """Phase 5: Analyze and interpret results."""
+        print(f"\n🔬 PHASE 5: Analyze Results")
+        print("-" * 40)
+        
+        phase_start = time.time()
+        
+        print("   🔄 Finding theory-practice bridges...")
+        
+        # Find theory-practice bridges
+        bridges = find_theory_practice_bridges(self.enhanced_graph, self.directory_graph)
+        
+        # Categorize files by type
+        file_categories = {'code': 0, 'docs': 0, 'configs': 0, 'other': 0}
+        for node in self.directory_graph.graph.nodes():
+            file_type = self.directory_graph.graph.nodes[node].get('file_type', 'other')
+            if file_type in file_categories:
+                file_categories[file_type] += 1
+            else:
+                file_categories['other'] += 1
+        
+        phase_time = time.time() - phase_start
+        total_time = time.time() - self.start_time
+        
+        print(f"   ✅ Analysis complete!")
+        print(f"   🌉 Theory-practice bridges: {len(bridges)}")
+        print(f"   📊 File categories: {file_categories}")
+        print(f"   🕒 Total demo time: {total_time:.1f}s")
+        
+        # Show sample bridges
+        if bridges:
+            print("\n   🔍 Sample bridges discovered:")
+            for i, (theory, practice) in enumerate(bridges[:5]):
+                print(f"      {i+1}. {theory} ↔ {practice}")
+        
+        self.bridges = bridges
+        self.results['phases']['phase_5'] = {
+            'duration': phase_time,
+            'total_bridges': len(bridges),
+            'file_categories': file_categories,
+            'sample_bridges': bridges[:10]
+        }
+        
+        self.results['final_metrics'] = {
+            'total_duration': total_time,
+            'nodes_processed': self.directory_graph.graph.number_of_nodes(),
+            'new_relationships': self.results['phases']['phase_4']['improvement']['new_edges'],
+            'bridges_found': len(bridges)
+        }
+    
+    def _phase_6_export_results(self):
+        """Phase 6: Export results and create summary."""
+        print(f"\n💾 PHASE 6: Export Results")
+        print("-" * 40)
+        
+        phase_start = time.time()
+        
+        # Finalize results
+        self.results['completed_at'] = datetime.now().isoformat()
+        self.results['total_duration'] = time.time() - self.start_time
+        
+        # Export results
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        
+        # JSON results
+        json_file = Path(f"demo_results_{timestamp}.json")
+        with open(json_file, 'w') as f:
+            json.dump(self.results, f, indent=2, default=str)
+        
+        # Markdown summary
+        md_file = Path(f"demo_summary_{timestamp}.md")
+        self._create_markdown_summary(md_file)
+        
+        phase_time = time.time() - phase_start
+        total_time = self.results['total_duration']
+        
+        print(f"   ✅ Results exported!")
+        print(f"   📄 JSON results: {json_file}")
+        print(f"   📄 Markdown summary: {md_file}")
+        print(f"   🕒 Export time: {phase_time:.1f}s")
+        
+        print(f"\n🎉 DEMO COMPLETE!")
+        print("=" * 60)
+        print(f"⏰ Total time: {total_time:.1f}s")
+        print(f"📊 Files processed: {self.results['phases']['phase_1']['file_counts']['total']}")
+        print(f"🔗 New relationships: +{self.results['final_metrics']['new_relationships']}")
+        print(f"🌉 Theory-practice bridges: {self.results['final_metrics']['bridges_found']}")
+        print("=" * 60)
+        
+        self.results['phases']['phase_6'] = {
+            'duration': phase_time,
+            'exports': [str(json_file), str(md_file)]
+        }
+    
+    def _create_chunks_from_directory_graph(self) -> List[Dict[str, Any]]:
+        """Create chunk representations from directory graph nodes."""
+        chunks = []
+        
+        for node_id in self.directory_graph.graph.nodes():
+            node_data = self.directory_graph.graph.nodes[node_id]
+            file_path = node_data.get('file_path', 'unknown')
+            
+            # Read file content if possible
+            content = ""
+            try:
+                if Path(file_path).exists() and Path(file_path).is_file():
+                    with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                        content = f.read()[:2000]  # Limit content size for demo
+            except:
+                content = f"File: {Path(file_path).name}"
+            
+            chunk = {
+                'chunk_id': node_id,
+                'content': content,
+                'document_metadata': {
+                    'file_path': file_path,
+                    'file_name': node_data.get('file_name', ''),
+                    'file_type': node_data.get('file_type', 'unknown')
+                },
+                'embedding': []  # Will be generated during training
+            }
+            chunks.append(chunk)
+        
+        return chunks
+    
+    def _create_enhanced_graph_from_isne(self):
+        """Create enhanced graph with ISNE similarity discoveries."""
+        # Start with the original directory graph
+        enhanced = self.directory_graph.graph.copy()
+        edges_added = 0
+        
+        if self.isne.trained_embeddings is None:
+            print("   ⚠️  No trained embeddings available, returning original graph")
+            return enhanced
+        
+        # Use top-k similarity approach
+        chunk_ids = list(self.isne.node_to_index.keys())
+        k_similar = min(5, len(chunk_ids) - 1)  # Adaptive k for smaller graphs
+        threshold = 0.8
+        
+        print(f"   🎯 Finding top-{k_similar} similar chunks (threshold: {threshold})...")
+        
+        for i, chunk_a in enumerate(chunk_ids):
+            if i % max(1, len(chunk_ids) // 10) == 0:  # Progress updates
+                print(f"   📊 Progress: {i}/{len(chunk_ids)} chunks processed...")
+            
+            # Find top-k similar chunks
+            similar_chunks = self.isne.find_similar_chunks(
+                chunk_a, 
+                k=k_similar, 
+                similarity_threshold=threshold
+            )
+            
+            # Add edges for each similar chunk found
+            for similar_chunk_id, similarity in similar_chunks:
+                if not enhanced.has_edge(chunk_a, similar_chunk_id):
+                    enhanced.add_edge(chunk_a, similar_chunk_id, 
+                                    edge_type="isne_discovered",
+                                    weight=similarity,
+                                    source="sequential_isne_demo")
+                    edges_added += 1
+        
+        print(f"   ✨ ISNE discovered {edges_added} new relationships")
+        return enhanced
+    
+    def _create_markdown_summary(self, output_file: Path):
+        """Create markdown summary of demo results."""
+        summary = f"""# Sequential-ISNE Demo Results
+
+## Demo Overview
+- **Directory**: {self.results['target_directory']}
+- **Started**: {self.results['started_at']}
+- **Completed**: {self.results['completed_at']}
+- **Duration**: {self.results['total_duration']:.1f} seconds
+
+## Parameters
+- **Epochs**: {self.results['parameters']['epochs']}
+- **Embedding Dimension**: {self.results['parameters']['embedding_dim']}
+
+## Results Summary
+- **Files Processed**: {self.results['phases']['phase_1']['file_counts']['total']}
+- **Python Files**: {self.results['phases']['phase_1']['file_counts']['python']}
+- **Documentation**: {self.results['phases']['phase_1']['file_counts']['docs']}
+
+## Graph Enhancement
+- **Original Edges**: {self.results['phases']['phase_2']['basic_metrics']['edges']}
+- **Enhanced Edges**: {self.results['phases']['phase_4']['enhanced_metrics']['edges']}
+- **New Relationships**: +{self.results['phases']['phase_4']['improvement']['new_edges']}
+- **Improvement**: {self.results['phases']['phase_4']['improvement']['improvement_percentage']:.1f}%
+
+## ISNE Training
+- **Training Time**: {self.results['phases']['phase_3']['training_time']:.1f}s
+- **Epochs Completed**: {self.results['phases']['phase_3']['training_results']['epochs_completed']}
+- **Nodes Trained**: {self.results['phases']['phase_3']['training_results']['nodes_trained']}
+
+## Discovery Results
+- **Theory-Practice Bridges**: {self.results['phases']['phase_5']['total_bridges']}
+
+This demo validates Sequential-ISNE's ability to discover meaningful relationships in your codebase.
+"""
+        
+        with open(output_file, 'w') as f:
+            f.write(summary)
 
 
 def main():
-    """Run Sequential-ISNE demo from command line."""
-    parser = argparse.ArgumentParser(
-        description="Sequential-ISNE Complete Pipeline Demo",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Examples:
-    python demo.py /path/to/dataset
-    python demo.py /path/to/dataset --config custom_config.yaml
-    
-The dataset should contain:
-    - PDF research papers (for theory content)
-    - Python code files (for practice content)
-    - Any text/markdown files
-        """
-    )
-    
-    parser.add_argument(
-        'data_directory',
-        help='Path to directory containing dataset (PDFs, code, docs)'
-    )
-    
-    parser.add_argument(
-        '--config',
-        default='config.yaml',
-        help='Path to configuration file (default: config.yaml)'
-    )
+    """Main demo entry point."""
+    parser = argparse.ArgumentParser(description='Sequential-ISNE Demo')
+    parser.add_argument('directory', type=Path, help='Directory to analyze')
+    parser.add_argument('--epochs', type=int, default=20, help='Training epochs (default: 20)')
+    parser.add_argument('--embedding-dim', type=int, default=128, help='Embedding dimension (default: 128)')
+    parser.add_argument('--output-dir', type=Path, default=Path('.'), help='Output directory for results (default: current directory)')
     
     args = parser.parse_args()
     
-    try:
-        # Initialize and run demo
-        demo = SequentialISNEDemo(args.config)
-        results = demo.run_complete_pipeline(args.data_directory)
-        
-        print(f"\n🎉 Demo completed successfully!")
-        print(f"📊 Check results in: experiments/{demo.experiment_name}_results.json")
-        
-        return 0
-        
-    except Exception as e:
-        print(f"\n❌ Demo failed: {e}")
-        import traceback
-        traceback.print_exc()
+    if not args.directory.exists():
+        print(f"❌ Directory not found: {args.directory}")
         return 1
+    
+    if not args.directory.is_dir():
+        print(f"❌ Path is not a directory: {args.directory}")
+        return 1
+    
+    # Create output directory if it doesn't exist
+    args.output_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Change to output directory for results
+    import os
+    original_dir = os.getcwd()
+    os.chdir(args.output_dir)
+    
+    try:
+        # Run demo
+        demo = SequentialISNEDemo(
+            target_directory=args.directory,
+            epochs=args.epochs,
+            embedding_dim=args.embedding_dim
+        )
+        demo.run_demo()
+        return 0
+    finally:
+        # Return to original directory
+        os.chdir(original_dir)
 
 
 if __name__ == "__main__":

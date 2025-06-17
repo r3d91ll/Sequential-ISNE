@@ -1,6 +1,6 @@
 # Sequential-ISNE: Stream-Based Inductive Shallow Node Embedding
 
-**A Novel Extension of ISNE for Streaming Document Processing and RAG Enhancement**
+-- **A Novel Extension of ISNE for Streaming Document Processing and RAG Enhancement** --
 
 Sequential-ISNE extends the groundbreaking ISNE (Inductive Shallow Node Embedding) algorithm [Kiss et al., 2024] to handle streaming document chunks, enabling real-time graph construction and embedding generation for Retrieval-Augmented Generation (RAG) systems.
 
@@ -9,7 +9,7 @@ Sequential-ISNE extends the groundbreaking ISNE (Inductive Shallow Node Embeddin
 While traditional ISNE requires a complete graph structure upfront, Sequential-ISNE processes documents as streams of chunks, building the graph incrementally and generating embeddings on-the-fly. This makes it ideal for:
 
 - **Real-time document processing pipelines**
-- **Large-scale RAG systems** 
+- **Large-scale RAG systems**
 - **Dynamic knowledge graphs**
 - **Streaming data applications**
 
@@ -59,6 +59,7 @@ python full_scale_test.py
 ## 📊 Benchmarks
 
 ### Small Dataset (7 files)
+
 - Nodes: 36
 - Initial edges: 126  
 - Enhanced edges: 141 (+11.9%)
@@ -66,6 +67,7 @@ python full_scale_test.py
 - Processing time: < 1 second
 
 ### Academic Dataset (829 files)
+
 - Nodes: 646
 - Initial edges: 4,940
 - Enhanced edges: 5,010 (+1.4%)
@@ -73,6 +75,7 @@ python full_scale_test.py
 - Processing time: 10.8 minutes
 
 ### Production Dataset with Docling (1,461 files)
+
 - Nodes: 1,115
 - Initial edges: 32,418
 - Enhanced edges: 39,049 (+20.5%)
@@ -84,7 +87,7 @@ python full_scale_test.py
 
 Sequential-ISNE processes documents through a streaming pipeline:
 
-```
+```text
 Document Stream → Chunks → Directory Graph → ISNE Training → Enhanced Graph
       ↓              ↓            ↓               ↓              ↓
    Streaming     Metadata    Co-location     Skip-gram      Discovered
@@ -126,7 +129,7 @@ The key innovation is using filesystem structure as an implicit knowledge graph:
 
 ## 🔍 Example Output
 
-```
+```text
 Theory-Practice Bridges Found:
 1. 'Actor-Network Theory.pdf' ↔ 'network_analyzer.py'
 2. 'Complex Systems Theory.pdf' ↔ 'graph_dynamics.py'

@@ -107,7 +107,7 @@ class StreamingChunkProcessor:
         """Sort files to optimize co-location discovery (empirically validated)."""
         if self.processing_order == ProcessingOrder.DIRECTORY_FIRST:
             # Validated strategy achieving 91.1% co-location success
-            def sort_key(path: str) -> Tuple[str, int, str]:
+            def directory_sort_key(path: str) -> Tuple[str, int, str]:
                 p = Path(path)
                 directory = str(p.parent)
                 
@@ -123,15 +123,15 @@ class StreamingChunkProcessor:
                 
                 return (directory, priority, p.name)
             
-            return sorted(file_paths, key=sort_key)
+            return sorted(file_paths, key=directory_sort_key)
         
         elif self.processing_order == ProcessingOrder.BREADTH_FIRST:
             # Process by directory depth, then alphabetically
-            def sort_key(path: str) -> Tuple[int, str]:
+            def breadth_sort_key(path: str) -> Tuple[int, str]:
                 depth = len(Path(path).parents)
                 return (depth, path)
             
-            return sorted(file_paths, key=sort_key)
+            return sorted(file_paths, key=breadth_sort_key)
         
         else:  # DEPTH_FIRST
             # Standard alphabetical sort creates natural depth-first ordering
@@ -201,8 +201,8 @@ class StreamingChunkProcessor:
     def _chunk_code_content(self, content: str) -> List[str]:
         """Chunk code content preserving logical structure."""
         lines = content.split('\n')
-        chunks = []
-        current_chunk = []
+        chunks: List[str] = []
+        current_chunk: List[str] = []
         current_size = 0
         
         for line in lines:
@@ -230,8 +230,8 @@ class StreamingChunkProcessor:
     def _chunk_text_content(self, content: str) -> List[str]:
         """Chunk text content by paragraphs and sections."""
         # Split by headers and paragraphs
-        sections = []
-        current_section = []
+        sections: List[str] = []
+        current_section: List[str] = []
         current_size = 0
         
         for line in content.split('\n'):
@@ -257,7 +257,7 @@ class StreamingChunkProcessor:
     
     def _chunk_generic_content(self, content: str) -> List[str]:
         """Generic sliding window chunking."""
-        chunks = []
+        chunks: List[str] = []
         start = 0
         
         while start < len(content):

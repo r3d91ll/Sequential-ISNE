@@ -71,3 +71,7 @@ htmlcov/
 # Environment variables
 .env
 .env.local
+
+models/*
+demo_results_*
+demo_summary_*

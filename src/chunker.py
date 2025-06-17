@@ -8,7 +8,7 @@ This demonstrates our complete chunking contribution as part of the data normali
 
 import ast
 import logging
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from pathlib import Path
 
 # Optional Chonky import for text chunking
@@ -28,7 +28,7 @@ class UnifiedChunker:
     - Text/Markdown → Chonky token-based chunking
     """
     
-    def __init__(self, config: Dict[str, Any] = None):
+    def __init__(self, config: Optional[Dict[str, Any]] = None):
         self.config = config or {}
         
         # Text chunking configuration
@@ -41,7 +41,7 @@ class UnifiedChunker:
         
         # Initialize Chonky if available
         if HAS_CHONKY:
-            self.text_chunker = TokenChunker(
+            self.text_chunker: Optional[Any] = TokenChunker(
                 chunk_size=self.text_chunk_size,
                 chunk_overlap=self.text_overlap
             )
@@ -111,8 +111,8 @@ class UnifiedChunker:
                             })
                             
                             # Mark lines as processed
-                            for line in range(start_line, end_line + 1):
-                                processed_lines.add(line)
+                            for line_num in range(start_line, end_line + 1):
+                                processed_lines.add(line_num)
             
             # Extract remaining top-level code (imports, constants, etc.)
             code_lines = code.split('\n')
@@ -153,7 +153,7 @@ class UnifiedChunker:
             try:
                 chonky_chunks = self.text_chunker.chunk(text)
                 
-                for i, chunk in enumerate(chonky_chunks):
+                for i, chunk in enumerate(chonky_chunks):  # type: ignore
                     chunks.append({
                         'content': chunk.text,
                         'metadata': {
@@ -229,7 +229,7 @@ class UnifiedChunker:
         if not chunks:
             return {'total_chunks': 0}
         
-        stats = {
+        stats: Dict[str, Any] = {
             'total_chunks': len(chunks),
             'chunking_methods': {},
             'chunk_types': {},
