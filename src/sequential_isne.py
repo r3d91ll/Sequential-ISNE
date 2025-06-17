@@ -215,12 +215,13 @@ if HAS_TORCH:
         rather than production performance.
         """
         
-        def __init__(self, config: TrainingConfig):
+        def __init__(self, config: TrainingConfig, num_nodes: int = 10000):
             super().__init__()
             self.config = config
+            self.num_nodes = max(num_nodes, 15000)  # Ensure sufficient capacity for academic scale
             
-            # Simple embedding layers
-            self.node_embedding = nn.Embedding(10000, config.embedding_dim)  # Max 10k nodes
+            # Dynamic embedding layers based on actual node count
+            self.node_embedding = nn.Embedding(self.num_nodes, config.embedding_dim)
             self.hidden = nn.Sequential(
                 nn.Linear(config.embedding_dim, config.hidden_dim),
                 nn.ReLU(),
@@ -239,6 +240,8 @@ if HAS_TORCH:
         
         def forward(self, node_ids: torch.Tensor) -> torch.Tensor:
             """Forward pass: node_ids -> embeddings."""
+            # Clamp node_ids to valid range to prevent index errors
+            node_ids = torch.clamp(node_ids, 0, self.num_nodes - 1)
             embeddings = self.node_embedding(node_ids)
             return self.hidden(embeddings)
 else:
@@ -299,9 +302,11 @@ class SequentialISNE:
         
         logger.info("Starting Sequential-ISNE training")
         
-        # Initialize model
+        # Initialize model with dynamic node count for academic scale
         device = self._get_device()
-        self.model = SimpleISNEModel(self.config).to(device)
+        num_nodes = len(self.node_to_index)
+        logger.info(f"Initializing model for {num_nodes} nodes")
+        self.model = SimpleISNEModel(self.config, num_nodes).to(device)
         optimizer = optim.Adam(self.model.parameters(), lr=self.config.learning_rate)
         
         # Prepare training data

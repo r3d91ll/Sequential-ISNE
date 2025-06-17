@@ -208,6 +208,52 @@ files = [
 ]
 
 [[package]]
+name = "chonkie"
+version = "1.0.10"
+description = "🦛 CHONK your texts with Chonkie ✨ - The no-nonsense chunking library"
+optional = false
+python-versions = ">=3.9"
+groups = ["main"]
+files = [
+    {file = "chonkie-1.0.10-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:585d2c7b263e798427bde7719f076116e3a786e657e0e7b039d83c94c781098f"},
+    {file = "chonkie-1.0.10-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:0dfda39ba1354270ec9de4d10a2e9e9a97fedc8f0784824a9bc171d2a807f9c9"},
+    {file = "chonkie-1.0.10-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:b7f3faf8a29f6804800c7013f047e23d8c78abd7be1f2a5d8bab23269c968672"},
+    {file = "chonkie-1.0.10-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:678431785a2ca0216ef4f29b66559fd9be1ed2011d969bb6d6e4016bb5b27819"},
+    {file = "chonkie-1.0.10-cp312-cp312-macosx_10_13_x86_64.whl", hash = "sha256:9e0995af48b1d931a7f7de8e4f230a28dcfa0010c2d1911a90e0fab90177f5b5"},
+    {file = "chonkie-1.0.10-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:06795b10fb9f2dbfb46e3c88e397166c950591980827426187e72049761e4d70"},
+    {file = "chonkie-1.0.10-cp313-cp313-macosx_10_13_x86_64.whl", hash = "sha256:ce0be28214fbd7350e581f8df321e420b49f1d9844f92d24d5935140aad7de46"},
+    {file = "chonkie-1.0.10-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:8f80c15717c60478e75088b45b9bf8d896fb887c8034d1431eabe1643d7d59a8"},
+    {file = "chonkie-1.0.10-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:058ad9eb1be9c356fa01c2d7b4bfbb354d252bf07a26a86635417d51237a951e"},
+    {file = "chonkie-1.0.10-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:02dfedf9c39616db7a29db30eceffefe6811b1a69d5c017092af71dbcf795b5e"},
+    {file = "chonkie-1.0.10.tar.gz", hash = "sha256:09a57277f755b3bd9c66052378c34ba778d2fc67d37cdc819fc378d195f7c6ea"},
+]
+
+[package.dependencies]
+tokenizers = ">=0.16.0"
+tqdm = ">=4.64.0"
+
+[package.extras]
+all = ["accelerate (>=1.6.0)", "chromadb (>=1.0.0)", "cohere (>=5.13.0)", "google-genai (>=1.0.0)", "huggingface-hub (>=0.24.0)", "jsonschema (>=4.23.0)", "magika (>=0.6.0,<0.7.0)", "model2vec (>=0.3.0)", "numpy (>=2.0.0,<3.0)", "openai (>=1.0.0)", "pydantic (>=2.0.0)", "qdrant-client (>=1.0.0)", "rich (>=13.0.0)", "sentence-transformers (>=3.0.0)", "tiktoken (>=0.5.0)", "torch (>=2.0.0,<3.0)", "transformers (>=4.0.0)", "tree-sitter (>=0.20.0)", "tree-sitter-language-pack (>=0.7.0)", "turbopuffer[fast] (>=0.2.0)"]
+chroma = ["chromadb (>=1.0.0)"]
+code = ["magika (>=0.6.0,<0.7.0)", "tree-sitter (>=0.20.0)", "tree-sitter-language-pack (>=0.7.0)"]
+cohere = ["cohere (>=5.13.0)", "numpy (>=2.0.0,<3.0)"]
+dev = ["coverage", "cython (>=3.0.0)", "datasets (>=1.14.0)", "mypy (>=1.11.0)", "pytest (>=6.2.0)", "pytest-asyncio (>=0.26.0)", "pytest-cov (>=4.0.0)", "pytest-xdist (>=2.5.0)", "ruff (>=0.0.265)", "transformers (>=4.0.0)"]
+gemini = ["google-genai (>=1.0.0)", "pydantic (>=2.0.0)"]
+genie = ["google-genai (>=1.0.0)", "pydantic (>=2.0.0)"]
+hub = ["huggingface-hub (>=0.24.0)", "jsonschema (>=4.23.0)"]
+jina = ["numpy (>=2.0.0,<3.0)"]
+model2vec = ["model2vec (>=0.3.0)", "numpy (>=2.0.0,<3.0)"]
+neural = ["torch (>=2.0.0,<3.0)", "transformers (>=4.0.0)"]
+openai = ["numpy (>=2.0.0,<3.0)", "openai (>=1.0.0)", "pydantic (>=2.0.0)", "tiktoken (>=0.5.0)"]
+pgvector = ["vecs (>=0.4.0)"]
+qdrant = ["qdrant-client (>=1.0.0)"]
+semantic = ["model2vec (>=0.3.0)", "numpy (>=2.0.0,<3.0)"]
+st = ["accelerate (>=1.6.0)", "numpy (>=2.0.0,<3.0)", "sentence-transformers (>=3.0.0)"]
+tpuf = ["turbopuffer[fast] (>=0.2.0)"]
+viz = ["rich (>=13.0.0)"]
+voyageai = ["numpy (>=2.0.0,<3.0)", "voyageai (>=0.3.2)"]
+
+[[package]]
 name = "click"
 version = "8.2.1"
 description = "Composable command line interface toolkit"
@@ -739,7 +785,6 @@ description = "A platform independent file lock."
 optional = false
 python-versions = ">=3.9"
 groups = ["main"]
-markers = "extra == \"full\" or extra == \"docs\" or extra == \"gpu\""
 files = [
     {file = "filelock-3.18.0-py3-none-any.whl", hash = "sha256:c401f4f8377c4464e6db25fff06205fd89bdd83b65eb0488ed1b160f780e21de"},
     {file = "filelock-3.18.0.tar.gz", hash = "sha256:adbc88eabb99d2fec8c9c1b229b171f18afa655400173ddc653d5d01501fb9f2"},
@@ -836,7 +881,6 @@ description = "File-system specification"
 optional = false
 python-versions = ">=3.9"
 groups = ["main"]
-markers = "extra == \"full\" or extra == \"docs\" or extra == \"gpu\""
 files = [
     {file = "fsspec-2025.5.1-py3-none-any.whl", hash = "sha256:24d3a2e663d5fc735ab256263c4075f374a174c3410c0b25e5bd1970bceaa462"},
     {file = "fsspec-2025.5.1.tar.gz", hash = "sha256:2e55e47a540b91843b755e83ded97c6e897fa0942b11490113f09e9c443c2475"},
@@ -911,7 +955,7 @@ description = "Fast transfer of large files with the Hugging Face Hub."
 optional = false
 python-versions = ">=3.8"
 groups = ["main"]
-markers = "(extra == \"gpu\" or extra == \"full\" or extra == \"docs\") and (platform_machine == \"x86_64\" or platform_machine == \"amd64\" or platform_machine == \"arm64\" or platform_machine == \"aarch64\")"
+markers = "platform_machine == \"x86_64\" or platform_machine == \"amd64\" or platform_machine == \"arm64\" or platform_machine == \"aarch64\""
 files = [
     {file = "hf_xet-1.1.3-cp37-abi3-macosx_10_12_x86_64.whl", hash = "sha256:c3b508b5f583a75641aebf732853deb058953370ce8184f5dabc49f803b0819b"},
     {file = "hf_xet-1.1.3-cp37-abi3-macosx_11_0_arm64.whl", hash = "sha256:b788a61977fbe6b5186e66239e2a329a3f0b7e7ff50dad38984c0c74f44aeca1"},
@@ -933,7 +977,6 @@ description = "Client library to download and publish models, datasets and other
 optional = false
 python-versions = ">=3.8.0"
 groups = ["main"]
-markers = "extra == \"gpu\" or extra == \"full\" or extra == \"docs\""
 files = [
     {file = "huggingface_hub-0.33.0-py3-none-any.whl", hash = "sha256:e8668875b40c68f9929150d99727d39e5ebb8a05a98e4191b908dc7ded9074b3"},
     {file = "huggingface_hub-0.33.0.tar.gz", hash = "sha256:aa31f70d29439d00ff7a33837c03f1f9dd83971ce4e29ad664d63ffb17d3bb97"},
@@ -2072,10 +2115,10 @@ files = [
 
 [package.dependencies]
 numpy = [
+    {version = ">=1.21.4", markers = "python_version >= \"3.10\" and platform_system == \"Darwin\""},
+    {version = ">=1.21.2", markers = "platform_system != \"Darwin\" and python_version >= \"3.10\""},
+    {version = ">=1.23.5", markers = "python_version >= \"3.11\""},
     {version = ">=1.26.0", markers = "python_version >= \"3.12\""},
-    {version = ">=1.23.5", markers = "python_version == \"3.11\""},
-    {version = ">=1.21.4", markers = "python_version == \"3.10\" and platform_system == \"Darwin\""},
-    {version = ">=1.21.2", markers = "platform_system != \"Darwin\" and python_version == \"3.10\""},
 ]
 
 [[package]]
@@ -2144,9 +2187,9 @@ files = [
 
 [package.dependencies]
 numpy = [
-    {version = ">=1.26.0", markers = "python_version >= \"3.12\""},
-    {version = ">=1.23.2", markers = "python_version == \"3.11\""},
     {version = ">=1.22.4", markers = "python_version < \"3.11\""},
+    {version = ">=1.23.2", markers = "python_version == \"3.11\""},
+    {version = ">=1.26.0", markers = "python_version >= \"3.12\""},
 ]
 python-dateutil = ">=2.8.2"
 pytz = ">=2020.1"
@@ -3009,10 +3052,9 @@ typing-extensions = {version = ">=4.4.0", markers = "python_version < \"3.13\""}
 name = "regex"
 version = "2024.11.6"
 description = "Alternative regular expression module, to replace re."
-optional = true
+optional = false
 python-versions = ">=3.8"
 groups = ["main"]
-markers = "extra == \"gpu\" or extra == \"full\""
 files = [
     {file = "regex-2024.11.6-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:ff590880083d60acc0433f9c3f713c51f7ac6ebb9adf889c79a261ecf541aa91"},
     {file = "regex-2024.11.6-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:658f90550f38270639e83ce492f27d2c8d2cd63805c65a13a14d36ca126753f0"},
@@ -3306,10 +3348,9 @@ files = [
 name = "safetensors"
 version = "0.5.3"
 description = ""
-optional = true
+optional = false
 python-versions = ">=3.7"
 groups = ["main"]
-markers = "extra == \"gpu\" or extra == \"full\""
 files = [
     {file = "safetensors-0.5.3-cp38-abi3-macosx_10_12_x86_64.whl", hash = "sha256:bd20eb133db8ed15b40110b7c00c6df51655a2998132193de2f75f72d99c7073"},
     {file = "safetensors-0.5.3-cp38-abi3-macosx_11_0_arm64.whl", hash = "sha256:21d01c14ff6c415c485616b8b0bf961c46b3b343ca59110d38d744e577f9cce7"},
@@ -4054,10 +4095,9 @@ zarr = ["fsspec", "kerchunk", "zarr (>=3)"]
 name = "tokenizers"
 version = "0.21.1"
 description = ""
-optional = true
+optional = false
 python-versions = ">=3.9"
 groups = ["main"]
-markers = "extra == \"gpu\" or extra == \"full\""
 files = [
     {file = "tokenizers-0.21.1-cp39-abi3-macosx_10_12_x86_64.whl", hash = "sha256:e78e413e9e668ad790a29456e677d9d3aa50a9ad311a40905d6861ba7692cf41"},
     {file = "tokenizers-0.21.1-cp39-abi3-macosx_11_0_arm64.whl", hash = "sha256:cd51cd0a91ecc801633829fcd1fda9cf8682ed3477c6243b9a095539de4aecf3"},
@@ -4345,7 +4385,6 @@ description = "Fast, Extensible Progress Meter"
 optional = false
 python-versions = ">=3.7"
 groups = ["main"]
-markers = "extra == \"gpu\" or extra == \"full\" or extra == \"docs\""
 files = [
     {file = "tqdm-4.67.1-py3-none-any.whl", hash = "sha256:26445eca388f82e72884e0d580d5464cd801a3ea01e63e5601bdff9ba6a48de2"},
     {file = "tqdm-4.67.1.tar.gz", hash = "sha256:f8aef9c52c08c13a65f30ea34f4e5aac3fd1a34959879d7e59e63027286627f2"},
@@ -4365,10 +4404,9 @@ telegram = ["requests"]
 name = "transformers"
 version = "4.52.4"
 description = "State-of-the-art Machine Learning for JAX, PyTorch and TensorFlow"
-optional = true
+optional = false
 python-versions = ">=3.9.0"
 groups = ["main"]
-markers = "extra == \"gpu\" or extra == \"full\""
 files = [
     {file = "transformers-4.52.4-py3-none-any.whl", hash = "sha256:203f5c19416d5877e36e88633943761719538a25d9775977a24fe77a1e5adfc7"},
     {file = "transformers-4.52.4.tar.gz", hash = "sha256:aff3764441c1adc192a08dba49740d3cbbcb72d850586075aed6bd89b98203e6"},
@@ -4514,7 +4552,7 @@ files = [
     {file = "typing_extensions-4.14.0-py3-none-any.whl", hash = "sha256:a1514509136dd0b477638fc68d6a91497af5076466ad0fa6c338e44e359944af"},
     {file = "typing_extensions-4.14.0.tar.gz", hash = "sha256:8676b788e32f02ab42d9e7c61324048ae4c6d844a399eebace3d4979d75ceef4"},
 ]
-markers = {main = "extra == \"full\" or extra == \"docs\" or extra == \"gpu\"", dev = "python_version == \"3.10\""}
+markers = {dev = "python_version == \"3.10\""}
 
 [[package]]
 name = "typing-inspect"
@@ -4626,4 +4664,4 @@ gpu = ["faiss-cpu", "sentence-transformers", "torch"]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.10"
-content-hash = "421f39b96e196b6d489d7ebe19d7f5df3299fedd417dcb830f4cb8b166c081ca"
+content-hash = "e0f4e43d0533adb661a55992e97e199940fa6e47e3b8e089be4f0a24d783f0b0"

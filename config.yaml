@@ -1,0 +1,103 @@
+# Sequential-ISNE Configuration
+# Centralized configuration for the complete pipeline
+
+# Data Normalization (Docling)
+normalization:
+  recursive: true
+  supported_extensions: ['.pdf', '.md', '.txt', '.py']
+  max_file_size_mb: 100
+  skip_errors: true
+
+# Chunking Configuration
+chunking:
+  # Text chunking (Chonky)
+  text_chunk_size: 512
+  text_overlap: 50
+  
+  # Python chunking (AST)
+  python_chunk_functions: true
+  python_chunk_classes: true
+  python_include_module_level: true
+
+# Embedding Configuration (CodeBERT)
+embedding:
+  model_name: "microsoft/codebert-base"
+  max_length: 512
+  normalize: true
+  device: "auto"  # auto, cpu, cuda
+  batch_size: 8
+
+# Sequential-ISNE Model
+model:
+  embedding_dim: 768  # Must match CodeBERT output
+  hidden_dim: 256
+  num_layers: 2
+  learning_rate: 0.001
+  epochs: 5
+  batch_size: 16
+  negative_samples: 5
+  device: "auto"
+
+# Theory-Practice Bridge Detection
+bridges:
+  # Keyword-based detection
+  theory_keywords:
+    - "algorithm"
+    - "model"
+    - "architecture"
+    - "method"
+    - "approach"
+    - "framework"
+    - "theory"
+    - "implementation"
+    - "embedding"
+    - "neural"
+    - "graph"
+    - "network"
+    - "node"
+    - "edge"
+    - "representation"
+    - "learning"
+    - "sequential"
+    - "streaming"
+  
+  # Semantic similarity detection
+  similarity_threshold: 0.7
+  max_sample_chunks: 50  # Limit for performance
+  
+  # Bridge strength calculation
+  keyword_weight: 1.0
+  colocation_bonus: 2.0
+  semantic_weight: 3.0
+
+# Validation Configuration
+validation:
+  sample_relationships: 20
+  similarity_threshold: 0.5
+  min_embedding_diversity: 0.05
+  connectivity_weights:
+    connected_bonus: 0.5
+    clustering_weight: 0.3
+    density_weight: 0.4
+
+# Logging Configuration
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR
+  save_logs: true
+  log_directory: "logs"
+  detailed_progress: true
+
+# Output Configuration
+output:
+  save_results: true
+  results_directory: "experiments"
+  save_model: true
+  save_embeddings: true
+  save_graph: true
+  
+# Demo Configuration
+demo:
+  show_progress: true
+  sample_results: 5
+  validate_bridges: true
+  generate_plots: false  # Set to true if matplotlib available
