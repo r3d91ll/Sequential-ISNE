@@ -1,0 +1,236 @@
+{
+  "pdf_extraction": {
+    "pdf_files_found": 2,
+    "successful_extractions": 2,
+    "failed_extractions": 0,
+    "total_pdf_chunks": 260,
+    "pdf_processing_details": [
+      {
+        "file": "/home/todd/ML-Lab/Olympus/sequential-ISNE-testdata/isne-enhanced/Unsupervised Graph Representation Learning with Inductive Shallow Node Embedding.pdf",
+        "success": true,
+        "chunks_created": 134,
+        "content_length": 59028,
+        "sample_content": "## ORIGINAL ARTICLE\n\n## Unsupervised Graph Representation Learning with Inductive Shallow Node Embedding\n\nRich\u00e1rd Kiss 1 \u00b7 G\u00e1bor Sz\"ucs 1\n\nReceived: 26 March 2024 / Accepted: 21 June 2024 / Published ..."
+      },
+      {
+        "file": "/home/todd/ML-Lab/Olympus/sequential-ISNE-testdata/pathrag-enhanced/PathRAG_paper.pdf",
+        "success": true,
+        "chunks_created": 126,
+        "content_length": 67284,
+        "sample_content": "## PathRAG: Pruning Graph-based Retrieval Augmented Generation with Relational Paths\n\nBoyu Chen$^{1}$, Zirui Guo$^{1,2}$, Zidan Yang$^{1,3}$, Yuluo Chen$^{1}$, Junze Chen$^{1}$,\n\nZhenghao Liu$^{3}$, C..."
+      }
+    ]
+  },
+  "integrated_processing": {
+    "repositories_processed": 2,
+    "total_chunks_created": 356,
+    "pdf_chunks": 260,
+    "code_chunks": 67,
+    "repository_details": {
+      "isne-enhanced": {
+        "total_files": 8,
+        "successful_files": 8,
+        "failed_files": 0,
+        "chunks_by_type": {
+          ".py": 6,
+          ".md": 11,
+          ".pdf": 134
+        },
+        "file_details": [
+          {
+            "file": "/home/todd/ML-Lab/Olympus/sequential-ISNE-testdata/isne-enhanced/src/__init__.py",
+            "extension": ".py",
+            "success": true,
+            "chunks": 0
+          },
+          {
+            "file": "/home/todd/ML-Lab/Olympus/sequential-ISNE-testdata/isne-enhanced/src/example.py",
+            "extension": ".py",
+            "success": true,
+            "chunks": 1
+          },
+          {
+            "file": "/home/todd/ML-Lab/Olympus/sequential-ISNE-testdata/isne-enhanced/src/layer.py",
+            "extension": ".py",
+            "success": true,
+            "chunks": 1
+          },
+          {
+            "file": "/home/todd/ML-Lab/Olympus/sequential-ISNE-testdata/isne-enhanced/src/loader.py",
+            "extension": ".py",
+            "success": true,
+            "chunks": 1
+          },
+          {
+            "file": "/home/todd/ML-Lab/Olympus/sequential-ISNE-testdata/isne-enhanced/src/model.py",
+            "extension": ".py",
+            "success": true,
+            "chunks": 3
+          },
+          {
+            "file": "/home/todd/ML-Lab/Olympus/sequential-ISNE-testdata/isne-enhanced/README.md",
+            "extension": ".md",
+            "success": true,
+            "chunks": 1
+          },
+          {
+            "file": "/home/todd/ML-Lab/Olympus/sequential-ISNE-testdata/isne-enhanced/src/README.md",
+            "extension": ".md",
+            "success": true,
+            "chunks": 10
+          },
+          {
+            "file": "/home/todd/ML-Lab/Olympus/sequential-ISNE-testdata/isne-enhanced/Unsupervised Graph Representation Learning with Inductive Shallow Node Embedding.pdf",
+            "extension": ".pdf",
+            "success": true,
+            "chunks": 134
+          }
+        ]
+      },
+      "pathrag-enhanced": {
+        "total_files": 12,
+        "successful_files": 12,
+        "failed_files": 0,
+        "chunks_by_type": {
+          ".py": 61,
+          ".md": 18,
+          ".pdf": 126
+        },
+        "file_details": [
+          {
+            "file": "/home/todd/ML-Lab/Olympus/sequential-ISNE-testdata/pathrag-enhanced/v1_test.py",
+            "extension": ".py",
+            "success": true,
+            "chunks": 1
+          },
+          {
+            "file": "/home/todd/ML-Lab/Olympus/sequential-ISNE-testdata/pathrag-enhanced/PathRAG/PathRAG.py",
+            "extension": ".py",
+            "success": true,
+            "chunks": 5
+          },
+          {
+            "file": "/home/todd/ML-Lab/Olympus/sequential-ISNE-testdata/pathrag-enhanced/PathRAG/__init__.py",
+            "extension": ".py",
+            "success": true,
+            "chunks": 1
+          },
+          {
+            "file": "/home/todd/ML-Lab/Olympus/sequential-ISNE-testdata/pathrag-enhanced/PathRAG/base.py",
+            "extension": ".py",
+            "success": true,
+            "chunks": 1
+          },
+          {
+            "file": "/home/todd/ML-Lab/Olympus/sequential-ISNE-testdata/pathrag-enhanced/PathRAG/llm.py",
+            "extension": ".py",
+            "success": true,
+            "chunks": 15
+          },
+          {
+            "file": "/home/todd/ML-Lab/Olympus/sequential-ISNE-testdata/pathrag-enhanced/PathRAG/operate.py",
+            "extension": ".py",
+            "success": true,
+            "chunks": 4
+          },
+          {
+            "file": "/home/todd/ML-Lab/Olympus/sequential-ISNE-testdata/pathrag-enhanced/PathRAG/prompt.py",
+            "extension": ".py",
+            "success": true,
+            "chunks": 27
+          },
+          {
+            "file": "/home/todd/ML-Lab/Olympus/sequential-ISNE-testdata/pathrag-enhanced/PathRAG/storage.py",
+            "extension": ".py",
+            "success": true,
+            "chunks": 6
+          },
+          {
+            "file": "/home/todd/ML-Lab/Olympus/sequential-ISNE-testdata/pathrag-enhanced/PathRAG/utils.py",
+            "extension": ".py",
+            "success": true,
+            "chunks": 1
+          },
+          {
+            "file": "/home/todd/ML-Lab/Olympus/sequential-ISNE-testdata/pathrag-enhanced/README.md",
+            "extension": ".md",
+            "success": true,
+            "chunks": 3
+          },
+          {
+            "file": "/home/todd/ML-Lab/Olympus/sequential-ISNE-testdata/pathrag-enhanced/PathRAG/README.md",
+            "extension": ".md",
+            "success": true,
+            "chunks": 15
+          },
+          {
+            "file": "/home/todd/ML-Lab/Olympus/sequential-ISNE-testdata/pathrag-enhanced/PathRAG_paper.pdf",
+            "extension": ".pdf",
+            "success": true,
+            "chunks": 126
+          }
+        ]
+      }
+    }
+  },
+  "theory_practice_bridges": {
+    "total_bridge_opportunities": 8490,
+    "repositories_with_opportunities": 2,
+    "potential_bridges": [
+      {
+        "repository": "isne-enhanced",
+        "pdf_file": "Unsupervised Graph Representation Learning with Inductive Shallow Node Embedding.pdf",
+        "code_file": "__init__.py",
+        "pdf_chunks": 134,
+        "code_chunks": 0,
+        "potential_relationships": 0
+      },
+      {
+        "repository": "isne-enhanced",
+        "pdf_file": "Unsupervised Graph Representation Learning with Inductive Shallow Node Embedding.pdf",
+        "code_file": "example.py",
+        "pdf_chunks": 134,
+        "code_chunks": 1,
+        "potential_relationships": 134
+      },
+      {
+        "repository": "isne-enhanced",
+        "pdf_file": "Unsupervised Graph Representation Learning with Inductive Shallow Node Embedding.pdf",
+        "code_file": "layer.py",
+        "pdf_chunks": 134,
+        "code_chunks": 1,
+        "potential_relationships": 134
+      },
+      {
+        "repository": "isne-enhanced",
+        "pdf_file": "Unsupervised Graph Representation Learning with Inductive Shallow Node Embedding.pdf",
+        "code_file": "loader.py",
+        "pdf_chunks": 134,
+        "code_chunks": 1,
+        "potential_relationships": 134
+      },
+      {
+        "repository": "isne-enhanced",
+        "pdf_file": "Unsupervised Graph Representation Learning with Inductive Shallow Node Embedding.pdf",
+        "code_file": "model.py",
+        "pdf_chunks": 134,
+        "code_chunks": 3,
+        "potential_relationships": 402
+      }
+    ],
+    "validation_approach": "content_based_similarity"
+  },
+  "overall_assessment": {
+    "individual_assessments": [
+      "\u2705 PDF content extraction successful",
+      "\u2705 PDF and code processing integrated",
+      "\u2705 Theory\u2192practice bridge opportunities identified"
+    ],
+    "successful_tests": 3,
+    "total_tests": 3,
+    "validation_score": 1.0,
+    "overall_status": "PASSED",
+    "pdf_processing_working": true,
+    "integration_working": true
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "experiment_name": "full-pipeline-20250616-175106",
+  "model_type": "Sequential-ISNE",
+  "config": {
+    "processing": {
+      "strategy": "doc_first_depth",
+      "chunk_size": 512,
+      "chunk_overlap": 50,
+      "add_boundary_markers": true,
+      "add_directory_markers": true
+    },
+    "embedding": {
+      "dimension": 384,
+      "model_name": "mock-384d",
+      "batch_size": 32
+    },
+    "model": {
+      "embedding_dim": 384,
+      "hidden_dim": 256,
+      "learning_rate": 0.001,
+      "epochs": 50,
+      "batch_size": 32
+    }
+  },
+  "training_completed": true,
+  "timestamp": "2025-06-16T17:52:08.069016"
+}

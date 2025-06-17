@@ -1,0 +1,40 @@
+[tool.poetry]
+name = "sequential-isne"
+version = "0.1.0"
+description = "Learning Inter-Document Relationships Through Ordered Chunk Processing"
+authors = ["Research Team"]
+readme = "README.md"
+packages = [{include = "src"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+numpy = "^1.21.0"
+networkx = "^3.0"
+scikit-learn = "^1.0.0"
+matplotlib = "^3.5.0"
+seaborn = "^0.11.0"
+pandas = "^2.1.0"
+wandb = "^0.16.0"
+python-dotenv = "^1.0.0"
+torch = {version = "^2.0.0", optional = true}
+sentence-transformers = {version = "^2.2.0", optional = true}
+faiss-cpu = {version = "^1.7.0", optional = true}
+docling = "^1.20.0"
+
+[tool.poetry.extras]
+gpu = ["torch", "sentence-transformers", "faiss-cpu"]
+full = ["torch", "sentence-transformers", "faiss-cpu", "docling"]
+docs = ["docling"]
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.0.0"
+pytest-cov = "^4.0.0"
+black = "^23.0.0"
+isort = "^5.12.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+validate-hypothesis = "experiments.hypothesis_validation.validate_streaming_hypothesis:main"

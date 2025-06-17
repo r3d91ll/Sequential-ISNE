@@ -1,0 +1,6 @@
+{
+  "experiment_name": "full-pipeline-20250616-132558",
+  "model_type": "Sequential-ISNE",
+  "config": {
+    "processing": {
+      "strategy": 

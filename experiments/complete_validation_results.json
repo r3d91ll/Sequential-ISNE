@@ -1,0 +1,159 @@
+{
+  "repository_enhancement": {
+    "isne": {
+      "original": {
+        "repo_name": "isne-original",
+        "total_files": 6,
+        "pdf_files": 0,
+        "md_files": 1,
+        "py_files": 5,
+        "total_chunks": 39,
+        "content_chunks": 25,
+        "total_relationships": 582
+      },
+      "enhanced": {
+        "repo_name": "isne-enhanced",
+        "total_files": 8,
+        "pdf_files": 1,
+        "md_files": 2,
+        "py_files": 5,
+        "total_chunks": 56,
+        "content_chunks": 40,
+        "total_relationships": 1528
+      },
+      "improvement": {
+        "files_added": 2,
+        "pdf_files_added": 1,
+        "documentation_added": 1,
+        "relationships_improvement": 2.625429553264605
+      }
+    },
+    "pathrag": {
+      "original": {
+        "repo_name": "pathrag-original",
+        "total_files": 11,
+        "pdf_files": 0,
+        "md_files": 1,
+        "py_files": 9,
+        "total_chunks": 333,
+        "content_chunks": 309,
+        "total_relationships": 90092
+      },
+      "enhanced": {
+        "repo_name": "pathrag-enhanced",
+        "total_files": 13,
+        "pdf_files": 1,
+        "md_files": 2,
+        "py_files": 9,
+        "total_chunks": 355,
+        "content_chunks": 329,
+        "total_relationships": 102493
+      },
+      "improvement": {
+        "files_added": 2,
+        "pdf_files_added": 1,
+        "documentation_added": 1,
+        "relationships_improvement": 1.1376481818585447
+      }
+    }
+  },
+  "document_processing": {
+    "pdf_files_found": 2,
+    "pdf_files_readable": 2,
+    "pdf_sample_files": [
+      "/home/todd/ML-Lab/Olympus/sequential-ISNE-testdata/isne-enhanced/Unsupervised Graph Representation Learning with Inductive Shallow Node Embedding.pdf",
+      "/home/todd/ML-Lab/Olympus/sequential-ISNE-testdata/pathrag-enhanced/PathRAG_paper.pdf"
+    ]
+  },
+  "hierarchical_processing": {
+    "random": {
+      "processing_time": 0.00022745132446289062,
+      "total_chunks": 0,
+      "content_chunks": 0,
+      "total_relationships": 0,
+      "theory_practice_relationships": 0
+    },
+    "alphabetical": {
+      "processing_time": 0.0001659393310546875,
+      "total_chunks": 0,
+      "content_chunks": 0,
+      "total_relationships": 0,
+      "theory_practice_relationships": 0
+    },
+    "depth_first": {
+      "processing_time": 0.00015687942504882812,
+      "total_chunks": 0,
+      "content_chunks": 0,
+      "total_relationships": 0,
+      "theory_practice_relationships": 0
+    },
+    "doc_first_depth": {
+      "processing_time": 0.0010576248168945312,
+      "total_chunks": 56,
+      "content_chunks": 40,
+      "total_relationships": 1516,
+      "theory_practice_relationships": 0
+    }
+  },
+  "theory_practice_bridges": {
+    "total_bridges_detected": 0,
+    "bridge_examples": [],
+    "repositories_with_bridges": 0
+  },
+  "ship_of_theseus": {
+    "isne": {
+      "original_processes": [
+        "modularization",
+        "documentation",
+        "package_structure"
+      ],
+      "enhanced_processes": [
+        "modularization",
+        "documentation",
+        "package_structure"
+      ],
+      "persistent_processes": [
+        "modularization",
+        "documentation",
+        "package_structure"
+      ],
+      "new_processes": [],
+      "process_persistence_rate": 1.0,
+      "identity_maintained": true
+    },
+    "pathrag": {
+      "original_processes": [
+        "documentation",
+        "testing",
+        "package_structure"
+      ],
+      "enhanced_processes": [
+        "documentation",
+        "testing",
+        "package_structure"
+      ],
+      "persistent_processes": [
+        "testing",
+        "documentation",
+        "package_structure"
+      ],
+      "new_processes": [],
+      "process_persistence_rate": 1.0,
+      "identity_maintained": true
+    }
+  },
+  "overall_assessment": {
+    "individual_assessments": [
+      "\u2705 Repository enhancement successful",
+      "\u2705 PDF documents successfully integrated",
+      "\u2705 Hierarchical processing strategies validated",
+      "\u26a0\ufe0f No theory\u2192practice bridges found",
+      "\u2705 Ship of Theseus principle validated"
+    ],
+    "successful_tests": 4,
+    "total_tests": 5,
+    "validation_score": 0.8,
+    "overall_status": "PASSED",
+    "ready_for_research": true
+  }
+}
