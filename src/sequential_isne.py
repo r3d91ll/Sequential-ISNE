@@ -290,6 +290,101 @@ class SequentialISNE:
         # Log graph statistics
         stats = self.graph.get_graph_statistics()
         logger.info(f"Graph statistics: {stats}")
+
+    def build_graph_from_directory_graph(
+        self,
+        directory_graph: 'DirectoryGraph',
+        chunks: List[Dict[str, Any]]
+    ) -> None:
+        """
+        Build Sequential-ISNE training graph from DirectoryGraph structure.
+        
+        This method integrates the directory-informed graph structure with 
+        Sequential-ISNE training, providing proper graph-based ISNE instead 
+        of sequential processing.
+        
+        Args:
+            directory_graph: DirectoryGraph instance with bootstrapped structure
+            chunks: List of chunk dictionaries with embeddings and metadata
+        """
+        logger.info("Building Sequential-ISNE graph from DirectoryGraph structure")
+        
+        # Clear existing graph
+        self.graph = SequentialGraph()
+        
+        # Create chunk_id to file_path mapping
+        chunk_to_file = {}
+        file_to_chunks = defaultdict(list)
+        
+        for chunk in chunks:
+            chunk_id = chunk['chunk_id']
+            file_path = chunk['document_metadata']['file_path']
+            chunk_to_file[chunk_id] = file_path
+            file_to_chunks[file_path].append(chunk)
+        
+        # Convert directory graph nodes/edges to chunk relationships
+        relationships = []
+        chunk_counter = 0
+        
+        for file_path, file_chunks in file_to_chunks.items():
+            # Add chunks for this file
+            for chunk in file_chunks:
+                chunk_counter += 1
+        
+        # Create relationships based on DirectoryGraph edges
+        for node_a, node_b, edge_data in directory_graph.graph.edges(data=True):
+            file_a = directory_graph.node_to_file.get(node_a)
+            file_b = directory_graph.node_to_file.get(node_b)
+            
+            if file_a and file_b and file_a in file_to_chunks and file_b in file_to_chunks:
+                # Create chunk-to-chunk relationships based on file relationships
+                chunks_a = file_to_chunks[file_a]
+                chunks_b = file_to_chunks[file_b]
+                
+                # Connect representative chunks (first chunk of each file)
+                if chunks_a and chunks_b:
+                    chunk_a = chunks_a[0]
+                    chunk_b = chunks_b[0]
+                    
+                    relationship = {
+                        'from_chunk_id': chunk_a['chunk_id'],
+                        'to_chunk_id': chunk_b['chunk_id'],
+                        'relationship_type': edge_data.get('edge_type', 'directory_informed'),
+                        'confidence': edge_data.get('weight', 0.5),
+                        'context': f"Directory connection: {edge_data.get('source', 'unknown')}"
+                    }
+                    relationships.append(relationship)
+        
+        # Convert chunks to StreamingChunk format for compatibility
+        from src.streaming_processor import StreamingChunk, ChunkMetadata
+        streaming_chunks = []
+        
+        for chunk in chunks:
+            doc_meta = chunk.get('document_metadata', {})
+            source_file = doc_meta.get('file_path', 'unknown')
+            
+            metadata = ChunkMetadata(
+                chunk_id=chunk['chunk_id'],
+                chunk_type='content',
+                doc_path=source_file,
+                directory=str(Path(source_file).parent),
+                processing_order=chunk['chunk_id'],
+                file_extension=Path(source_file).suffix
+            )
+            
+            streaming_chunk = StreamingChunk(
+                chunk_id=chunk['chunk_id'],
+                content=chunk['content'],
+                metadata=metadata,
+                semantic_embedding=chunk.get('embedding', [])
+            )
+            streaming_chunks.append(streaming_chunk)
+        
+        # Build graph using existing method
+        self.build_graph_from_chunks(streaming_chunks, relationships)
+        
+        logger.info(f"Built graph from DirectoryGraph: {len(streaming_chunks)} chunks, {len(relationships)} relationships")
+        logger.info(f"Directory-informed relationship types: {list(set(r['relationship_type'] for r in relationships))}")
     
     def train_embeddings(self) -> Dict[str, Any]:
         """

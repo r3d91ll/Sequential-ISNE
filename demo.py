@@ -28,6 +28,7 @@ from typing import Dict, List, Any
 from src.data_normalizer import DataNormalizer
 from chunker import UnifiedChunker
 from embedder import CodeBERTEmbedder
+from directory_graph import DirectoryGraph
 from src.sequential_isne import SequentialISNE, TrainingConfig
 from src.streaming_processor import StreamingChunk, ChunkMetadata, StreamingChunkProcessor
 
@@ -277,106 +278,110 @@ class SequentialISNEDemo:
         return embedded_chunks
     
     def _detect_bridges(self, embedded_chunks: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Phase 4: Detect theory-practice bridges."""
-        print("   🔄 Detecting theory-practice bridges...")
+        """Phase 4: Detect theory-practice bridges using directory-informed graph."""
+        print("   🔄 Building directory-informed graph for bridge detection...")
         
-        # Separate chunks by type
-        python_chunks = [c for c in embedded_chunks if c['document_metadata']['file_type'] == 'python']
-        text_chunks = [c for c in embedded_chunks if c['document_metadata']['file_type'] == 'text']
+        # Build directory graph from chunks
+        directory_graph = DirectoryGraph()
         
-        print(f"   🔍 Analyzing {len(python_chunks)} Python vs {len(text_chunks)} text chunks")
+        # Create file contents mapping
+        file_contents = {}
+        node_to_chunk = {}
         
-        bridges = []
-        
-        # Keyword-based bridge detection
-        theory_keywords = self.config.get('bridges', {}).get('theory_keywords', [])
-        max_samples = self.config.get('bridges', {}).get('max_sample_chunks', 50)
-        
-        for text_chunk in text_chunks[:max_samples]:
-            text_content = text_chunk['content'].lower()
-            text_keywords = [kw for kw in theory_keywords if kw in text_content]
+        for chunk in embedded_chunks:
+            file_path = chunk['document_metadata']['file_path']
+            content = chunk['content']
             
-            if text_keywords:
-                for python_chunk in python_chunks[:max_samples]:
-                    python_content = python_chunk['content'].lower()
-                    shared_keywords = [kw for kw in text_keywords if kw in python_content]
-                    
-                    if shared_keywords:
-                        # Calculate bridge strength
-                        strength = len(shared_keywords)
-                        
-                        # Add semantic similarity if embeddings available
-                        if 'embedding' in text_chunk and 'embedding' in python_chunk:
-                            similarity = self.embedder.calculate_similarity(
-                                text_chunk['embedding'], 
-                                python_chunk['embedding']
-                            )
-                            strength += similarity * self.config.get('bridges', {}).get('semantic_weight', 3.0)
-                        
-                        bridges.append({
-                            'text_file': Path(text_chunk['metadata']['source_file']).name,
-                            'python_file': Path(python_chunk['metadata']['source_file']).name,
-                            'text_chunk_id': text_chunk['chunk_id'],
-                            'python_chunk_id': python_chunk['chunk_id'],
-                            'shared_concepts': shared_keywords,
-                            'strength': strength,
-                            'bridge_type': 'theory_practice'
-                        })
+            # Accumulate content for files (chunks belong to same file)
+            if file_path not in file_contents:
+                file_contents[file_path] = ""
+            file_contents[file_path] += content + "\n"
         
-        # Sort by strength
-        bridges.sort(key=lambda x: x['strength'], reverse=True)
+        # Bootstrap graph from directory structure
+        data_root = Path(list(file_contents.keys())[0]).parents[2]  # Go up to dataset root
+        directory_graph.bootstrap_from_directory(data_root, file_contents)
         
-        print(f"   ✅ Detected {len(bridges)} theory-practice bridges")
+        # Add semantic similarity edges using embeddings
+        if embedded_chunks:
+            embeddings = {}
+            for chunk in embedded_chunks:
+                file_path = chunk['document_metadata']['file_path']
+                if file_path in directory_graph.file_to_node:
+                    node_id = directory_graph.file_to_node[file_path]
+                    if 'embedding' in chunk:
+                        embeddings[node_id] = chunk['embedding']
+            
+            if embeddings:
+                directory_graph.extend_with_semantic_similarity(embeddings, threshold=0.7)
+        
+        # Find theory-practice bridges using graph structure
+        bridges = directory_graph.find_theory_practice_bridges()
+        
+        print(f"   ✅ Detected {len(bridges)} theory-practice bridges from directory graph")
+        print(f"   📊 Graph: {directory_graph.graph.number_of_nodes()} nodes, {directory_graph.graph.number_of_edges()} edges")
         
         # Show top bridges
         for i, bridge in enumerate(bridges[:3]):
-            print(f"      {i+1}. {bridge['text_file']} ↔ {bridge['python_file']} "
-                  f"(strength: {bridge['strength']:.2f})")
+            print(f"      {i+1}. {Path(bridge['theory_file']).name} ↔ {Path(bridge['practice_file']).name} "
+                  f"(strength: {bridge['strength']:.2f}, type: {bridge['connection_type']})")
         
-        return bridges
+        # Convert to format expected by rest of pipeline
+        converted_bridges = []
+        for bridge in bridges:
+            converted_bridges.append({
+                'text_file': Path(bridge['theory_file']).name,
+                'python_file': Path(bridge['practice_file']).name,
+                'text_chunk_id': bridge['theory_node'],
+                'python_chunk_id': bridge['practice_node'],
+                'shared_concepts': [bridge['connection_type']],
+                'strength': bridge['strength'],
+                'bridge_type': 'directory_informed'
+            })
+        
+        return converted_bridges
     
     def _train_model(self, embedded_chunks: List[Dict[str, Any]]) -> tuple:
-        """Phase 5: Train Sequential-ISNE model."""
-        print("   🔄 Training Sequential-ISNE model...")
+        """Phase 5: Train Sequential-ISNE model using directory-informed graph."""
+        print("   🔄 Training Sequential-ISNE model with directory-informed graph...")
         
-        # Convert to StreamingChunk objects
-        streaming_chunks = []
+        # Build directory graph (reuse from bridge detection)
+        directory_graph = DirectoryGraph()
+        
+        # Create file contents mapping
+        file_contents = {}
         for chunk in embedded_chunks:
-            metadata = ChunkMetadata(
-                chunk_id=chunk['chunk_id'],
-                chunk_type='content',  # Sequential-ISNE expects content chunks
-                doc_path=chunk['metadata']['source_file'],
-                directory=str(Path(chunk['metadata']['source_file']).parent),
-                processing_order=chunk['chunk_id'],
-                file_extension=Path(chunk['metadata']['source_file']).suffix
-            )
+            file_path = chunk['document_metadata']['file_path']
+            content = chunk['content']
             
-            streaming_chunk = StreamingChunk(
-                chunk_id=chunk['chunk_id'],
-                content=chunk['content'],
-                metadata=metadata,
-                semantic_embedding=chunk['embedding']
-            )
-            streaming_chunks.append(streaming_chunk)
+            # Accumulate content for files (chunks belong to same file)
+            if file_path not in file_contents:
+                file_contents[file_path] = ""
+            file_contents[file_path] += content + "\n"
         
-        # Generate relationships using streaming processor
-        processor = StreamingChunkProcessor()
-        processor.chunk_registry = {chunk.chunk_id: chunk for chunk in streaming_chunks}
-        processor.current_chunk_id = len(streaming_chunks)
+        # Bootstrap graph from directory structure
+        data_root = Path(list(file_contents.keys())[0]).parents[2]  # Go up to dataset root
+        directory_graph.bootstrap_from_directory(data_root, file_contents)
         
-        for chunk in streaming_chunks:
-            directory = chunk.metadata.directory
-            processor.directory_chunks[directory].append(chunk.chunk_id)
+        # Add semantic similarity edges using embeddings
+        if embedded_chunks:
+            embeddings = {}
+            for chunk in embedded_chunks:
+                file_path = chunk['document_metadata']['file_path']
+                if file_path in directory_graph.file_to_node:
+                    node_id = directory_graph.file_to_node[file_path]
+                    if 'embedding' in chunk:
+                        embeddings[node_id] = chunk['embedding']
+            
+            if embeddings:
+                directory_graph.extend_with_semantic_similarity(embeddings, threshold=0.7)
         
-        relationships = processor.get_sequential_relationships()
+        print(f"   📊 Directory graph: {directory_graph.graph.number_of_nodes()} nodes, {directory_graph.graph.number_of_edges()} edges")
         
-        print(f"   🔗 Generated {len(relationships)} sequential relationships")
-        
-        # Initialize and train model
+        # Initialize and train model with directory-informed graph
         model = SequentialISNE(self.training_config)
-        model.build_graph_from_chunks(streaming_chunks, relationships)
+        model.build_graph_from_directory_graph(directory_graph, embedded_chunks)
         
-        print(f"   🏃 Training on {len(streaming_chunks)} chunks for {self.training_config.epochs} epochs...")
+        print(f"   🏃 Training on {len(embedded_chunks)} chunks for {self.training_config.epochs} epochs...")
         training_results = model.train_embeddings()
         
         print(f"   ✅ Training completed")
