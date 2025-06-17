@@ -221,11 +221,26 @@ class FullScaleTest:
         # Convert directory graph to chunks for Sequential-ISNE
         chunks = self._create_chunks_from_directory_graph()
         
+        # Configure logging for Sequential-ISNE module
+        import logging
+        seq_logger = logging.getLogger('src.sequential_isne')
+        seq_logger.setLevel(logging.INFO)
+        if not seq_logger.handlers:
+            seq_logger.addHandler(logging.StreamHandler())
+        
+        logger.info("📊 Configuring Sequential-ISNE logging...")
+        logger.info("🔄 Building graph and training embeddings...")
+        
         # Build graph and train
         training_start = time.time()
         self.isne.build_graph_from_directory_graph(self.directory_graph, chunks)
+        
+        logger.info("🚀 Starting ISNE training with full logging...")
         training_results = self.isne.train_embeddings()  # Real ISNE training
         training_time = time.time() - training_start
+        
+        logger.info(f"📊 Training results: {training_results}")
+        logger.info(f"✅ Training completed in {training_time:.2f} seconds")
         
         phase_time = time.time() - phase_start
         
@@ -454,27 +469,51 @@ class FullScaleTest:
             print("   ⚠️  No trained embeddings available, returning original graph")
             return enhanced
         
-        # Top-k similarity approach (mathematically sound)
+        # Top-k similarity approach with threshold analysis
         chunk_ids = list(self.isne.node_to_index.keys())
         k_similar = 10  # Find top 10 most similar chunks for each chunk
-        similarity_threshold = 0.6  # Minimum similarity to consider
         
-        print(f"   🎯 Top-K ISNE similarity computation for {len(chunk_ids)} chunks...")
-        print(f"   📊 Parameters: k={k_similar}, threshold={similarity_threshold}")
-        print(f"   💻 Maximum possible new edges: {len(chunk_ids) * k_similar:,}")
+        # Test different thresholds to understand quality distribution
+        thresholds_to_test = [0.6, 0.8, 0.9, 0.95, 0.98, 0.99]
+        
+        print(f"   🎯 Top-K threshold analysis for {len(chunk_ids)} chunks...")
+        print(f"   📊 Parameters: k={k_similar}")
+        print(f"   🔍 Testing thresholds: {thresholds_to_test}")
         
         similarity_start = time.time()
+        threshold_results = {}
         
-        # For each chunk, find its k most similar chunks
+        # Test each threshold
+        for threshold in thresholds_to_test:
+            print(f"   📊 Testing threshold {threshold}...")
+            edges_found = 0
+            
+            for i, chunk_a in enumerate(chunk_ids):
+                # Find top-k similar chunks at this threshold
+                similar_chunks = self.isne.find_similar_chunks(
+                    chunk_a, 
+                    k=k_similar, 
+                    similarity_threshold=threshold
+                )
+                edges_found += len(similar_chunks)
+            
+            threshold_results[threshold] = edges_found
+            print(f"     ✓ Threshold {threshold}: {edges_found:,} potential edges")
+        
+        # Use a reasonable threshold for actual enhancement (0.8 seems good balance)
+        chosen_threshold = 0.8
+        print(f"   🎯 Using threshold {chosen_threshold} for graph enhancement...")
+        
+        edges_added = 0
         for i, chunk_a in enumerate(chunk_ids):
-            if i % 50 == 0:  # Progress updates
+            if i % 100 == 0:  # Less frequent progress updates
                 print(f"   📊 Progress: {i}/{len(chunk_ids)} chunks processed...")
             
             # Find top-k similar chunks
             similar_chunks = self.isne.find_similar_chunks(
                 chunk_a, 
                 k=k_similar, 
-                similarity_threshold=similarity_threshold
+                similarity_threshold=chosen_threshold
             )
             
             # Add edges for each similar chunk found
@@ -484,12 +523,13 @@ class FullScaleTest:
                     enhanced.add_edge(chunk_a, similar_chunk_id, 
                                     edge_type="isne_discovered",
                                     weight=similarity,
-                                    source="sequential_isne_topk")
+                                    source=f"sequential_isne_topk_t{chosen_threshold}")
                     edges_added += 1
         
         similarity_time = time.time() - similarity_start
-        print(f"   ⚡ Top-K similarity computation completed in {similarity_time:.2f} seconds")
-        print(f"   ✨ ISNE discovered {edges_added} new relationships via top-k method")
+        print(f"   ⚡ Top-K analysis completed in {similarity_time:.2f} seconds")
+        print(f"   📈 Threshold analysis results: {threshold_results}")
+        print(f"   ✨ ISNE discovered {edges_added} new relationships with threshold {chosen_threshold}")
         
         return enhanced
     

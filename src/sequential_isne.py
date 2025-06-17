@@ -16,12 +16,17 @@ Key features:
 import logging
 import numpy as np
 import networkx as nx
-from typing import List, Dict, Any, Tuple, Optional, Set
+from typing import List, Dict, Any, Tuple, Optional, Set, TYPE_CHECKING
 from dataclasses import dataclass
 from pathlib import Path
 import json
 import pickle
 from collections import defaultdict
+
+# Type checking imports
+if TYPE_CHECKING:
+    from src.streaming_processor import StreamingChunk
+    from directory_graph import DirectoryGraph
 
 # Optional imports for neural network
 try:
@@ -402,29 +407,82 @@ class SequentialISNE:
             logger.info("Cleared GPU cache before training")
         
         logger.info("Starting Sequential-ISNE training with PyTorch")
+        logger.info("🔥 DEBUG: Sequential-ISNE training started with PyTorch")
         
         # Initialize model with dynamic node count for academic scale
         device = self._get_device()
         num_nodes = len(self.node_to_index)
-        logger.info(f"Initializing model for {num_nodes} nodes")
-        self.model = SimpleISNEModel(self.config, num_nodes).to(device)
-        optimizer = optim.Adam(self.model.parameters(), lr=self.config.learning_rate)
+        logger.info(f"Initializing model for {num_nodes} nodes on device: {device}")
+        
+        try:
+            self.model = SimpleISNEModel(self.config, num_nodes).to(device)
+            logger.info(f"Model initialized successfully: {self.model}")
+            optimizer = optim.Adam(self.model.parameters(), lr=self.config.learning_rate)
+            logger.info(f"Optimizer initialized with LR: {self.config.learning_rate}")
+        except Exception as e:
+            logger.error(f"Model initialization failed: {e}")
+            return self._train_embeddings_fallback()
         
         # Prepare training data
+        logger.info("Creating training pairs from graph edges...")
+        logger.info(f"🔍 DEBUG: Creating training pairs from {self.graph.graph.number_of_edges()} graph edges")
         training_pairs = self._create_training_pairs()
         logger.info(f"Created {len(training_pairs)} training pairs")
+        logger.info(f"📊 DEBUG: Created {len(training_pairs)} training pairs")
+        
+        if len(training_pairs) == 0:
+            logger.warning("No training pairs found! Graph may have no edges or mapping issues.")
+            logger.warning(f"❌ DEBUG: NO TRAINING PAIRS! Graph edges: {self.graph.graph.number_of_edges()}, Node mappings: {len(self.node_to_index)}")
+            logger.info(f"Graph edges: {self.graph.graph.number_of_edges()}")
+            logger.info(f"Node mapping size: {len(self.node_to_index)}")
+            return self._train_embeddings_fallback()
         
         # Training loop
+        logger.info(f"Starting training loop for {self.config.epochs} epochs...")
+        logger.info(f"🔄 DEBUG: Starting training loop for {self.config.epochs} epochs")
         losses = []
-        for epoch in range(self.config.epochs):
-            epoch_loss = self._train_epoch(training_pairs, optimizer, device)
-            losses.append(epoch_loss)
-            
-            if epoch % 20 == 0:
-                logger.info(f"Epoch {epoch}/{self.config.epochs}, Loss: {epoch_loss:.4f}")
+        
+        try:
+            for epoch in range(self.config.epochs):
+                logger.debug(f"Starting epoch {epoch}")
+                epoch_loss = self._train_epoch(training_pairs, optimizer, device)
+                losses.append(epoch_loss)
+                
+                if epoch % 10 == 0:  # More frequent updates to see loss progression
+                    logger.info(f"Epoch {epoch}/{self.config.epochs}, Loss: {epoch_loss:.4f}")
+                    logger.info(f"📈 DEBUG: Epoch {epoch}/{self.config.epochs}, Loss: {epoch_loss:.4f}")
+                    
+                    # Sample embedding similarity check
+                    if epoch > 0 and epoch % 20 == 0:
+                        self.model.eval()
+                        with torch.no_grad():
+                            sample_emb1 = self.model(torch.tensor([0], device=device))
+                            sample_emb2 = self.model(torch.tensor([1], device=device))
+                            sample_emb3 = self.model(torch.tensor([2], device=device))
+                            
+                            sim_12 = torch.cosine_similarity(sample_emb1, sample_emb2).item()
+                            sim_13 = torch.cosine_similarity(sample_emb1, sample_emb3).item()
+                            sim_23 = torch.cosine_similarity(sample_emb2, sample_emb3).item()
+                            
+                            logger.info(f"🔍 DEBUG: Sample similarities - 0↔1: {sim_12:.4f}, 0↔2: {sim_13:.4f}, 1↔2: {sim_23:.4f}")
+                        self.model.train()
+                
+            logger.info(f"Training completed successfully! Total epochs: {len(losses)}")
+            logger.info(f"✅ DEBUG: Training completed! Total epochs: {len(losses)}")
+        except Exception as e:
+            logger.error(f"Training failed during epoch {len(losses)}: {e}")
+            logger.error(f"❌ DEBUG: Training failed during epoch {len(losses)}: {e}")
+            logger.info("Falling back to random embeddings")
+            return self._train_embeddings_fallback()
         
         # Extract trained embeddings
-        self._extract_embeddings(device)
+        logger.info("Extracting trained embeddings from model...")
+        try:
+            self._extract_embeddings(device)
+            logger.info(f"Successfully extracted embeddings: shape {self.trained_embeddings.shape if self.trained_embeddings is not None else 'None'}")
+        except Exception as e:
+            logger.error(f"Embedding extraction failed: {e}")
+            return self._train_embeddings_fallback()
         
         training_metrics = {
             "final_loss": losses[-1] if losses else 0.0,
@@ -439,16 +497,39 @@ class SequentialISNE:
     
     def _train_embeddings_fallback(self) -> Dict[str, Any]:
         """Fallback training without PyTorch (uses random embeddings)."""
-        logger.warning("PyTorch not available, using random embeddings for validation")
+        logger.warning("=== USING FALLBACK RANDOM EMBEDDINGS ===")
+        logger.warning("🚨 DEBUG: === USING FALLBACK RANDOM EMBEDDINGS ===")
+        logger.warning("This means PyTorch training failed or wasn't available!")
+        logger.warning("🚨 DEBUG: This means PyTorch training failed or wasn't available!")
         
         num_nodes = len(self.node_to_index)
+        logger.info(f"Creating random embeddings for {num_nodes} nodes, dim={self.config.embedding_dim}")
+        
         # Create consistent random embeddings based on node IDs
         np.random.seed(42)
         self.trained_embeddings = np.random.randn(num_nodes, self.config.embedding_dim)
+        logger.info(f"Generated random embeddings shape: {self.trained_embeddings.shape}")
         
         # Normalize embeddings
         norms = np.linalg.norm(self.trained_embeddings, axis=1, keepdims=True)
+        logger.info(f"Embedding norms before normalization: min={norms.min():.4f}, max={norms.max():.4f}, mean={norms.mean():.4f}")
         self.trained_embeddings = self.trained_embeddings / norms
+        
+        # Verify normalization
+        new_norms = np.linalg.norm(self.trained_embeddings, axis=1)
+        logger.info(f"Embedding norms after normalization: min={new_norms.min():.4f}, max={new_norms.max():.4f}, mean={new_norms.mean():.4f}")
+        
+        # Check similarity distribution
+        sample_similarities = []
+        for i in range(min(10, num_nodes)):
+            for j in range(i+1, min(10, num_nodes)):
+                sim = np.dot(self.trained_embeddings[i], self.trained_embeddings[j])
+                sample_similarities.append(sim)
+        
+        if sample_similarities:
+            logger.info(f"Sample cosine similarities: min={min(sample_similarities):.4f}, max={max(sample_similarities):.4f}, mean={np.mean(sample_similarities):.4f}")
+        
+        logger.warning("=== END FALLBACK EMBEDDING GENERATION ===")
         
         return {
             "final_loss": 0.0,
@@ -468,14 +549,38 @@ class SequentialISNE:
     def _create_training_pairs(self) -> List[Tuple[int, int, float]]:
         """Create positive training pairs from graph edges."""
         pairs = []
+        total_edges = 0
+        valid_edges = 0
+        
+        logger.info(f"Processing {self.graph.graph.number_of_edges()} graph edges for training pairs")
+        logger.info(f"Available chunk mappings: {len(self.node_to_index)}")
+        
+        # Debug: Show first few node mappings
+        sample_nodes = list(self.node_to_index.keys())[:5]
+        logger.info(f"Sample node IDs in mapping: {sample_nodes}")
+        
+        # Debug: Show first few graph edges
+        sample_edges = list(self.graph.graph.edges(data=True))[:5]
+        logger.info(f"Sample graph edges: {[(f, t, d.get('relationship_type', 'unknown')) for f, t, d in sample_edges]}")
         
         for from_id, to_id, edge_data in self.graph.graph.edges(data=True):
+            total_edges += 1
+            
             if from_id in self.node_to_index and to_id in self.node_to_index:
                 from_idx = self.node_to_index[from_id]
                 to_idx = self.node_to_index[to_id]
                 confidence = edge_data.get('confidence', 0.5)
                 
                 pairs.append((from_idx, to_idx, confidence))
+                valid_edges += 1
+            else:
+                if total_edges <= 3:  # Log first few missing mappings
+                    logger.warning(f"Missing mapping for edge: {from_id} -> {to_id}")
+                    logger.warning(f"  from_id in mapping: {from_id in self.node_to_index}")
+                    logger.warning(f"  to_id in mapping: {to_id in self.node_to_index}")
+        
+        logger.info(f"Training pairs created: {len(pairs)} valid / {total_edges} total edges")
+        logger.info(f"Mapping success rate: {valid_edges/total_edges*100:.1f}%")
         
         return pairs
     
@@ -498,25 +603,50 @@ class SequentialISNE:
         return total_loss / len(training_pairs)
     
     def _compute_batch_loss(self, batch: List[Tuple[int, int, float]], device) -> torch.Tensor:
-        """Compute loss for a batch of training pairs."""
-        batch_loss = 0.0
+        """Compute ISNE loss with skip-gram objective and negative sampling."""
+        total_loss = torch.tensor(0.0, device=device, requires_grad=True)
+        
+        # Get all node indices for negative sampling
+        all_indices = list(range(len(self.node_to_index)))
         
         for from_idx, to_idx, confidence in batch:
-            # Get embeddings
+            # Get embeddings for positive pair
             from_tensor = torch.tensor([from_idx], device=device)
             to_tensor = torch.tensor([to_idx], device=device)
             
-            from_emb = self.model(from_tensor)
-            to_emb = self.model(to_tensor)
+            from_emb = self.model(from_tensor)  # Shape: [1, embedding_dim]
+            to_emb = self.model(to_tensor)      # Shape: [1, embedding_dim]
             
-            # Cosine similarity loss (simplified)
-            similarity = torch.cosine_similarity(from_emb, to_emb)
-            target_similarity = torch.tensor([confidence], device=device)
+            # Positive loss: -log(σ(u_i^T * v_j))
+            positive_score = torch.sum(from_emb * to_emb, dim=1)  # Dot product
+            positive_loss = -torch.log(torch.sigmoid(positive_score) + 1e-8)  # Add epsilon for numerical stability
             
-            loss = nn.MSELoss()(similarity, target_similarity)
-            batch_loss += loss
+            # Negative sampling: sample k negative nodes
+            negative_loss = torch.tensor(0.0, device=device)
+            num_negative_samples = min(self.config.negative_samples, len(all_indices) - 2)  # Exclude from_idx and to_idx
+            
+            if num_negative_samples > 0:
+                # Sample negative nodes (not from_idx or to_idx)
+                available_negatives = [idx for idx in all_indices if idx != from_idx and idx != to_idx]
+                if len(available_negatives) >= num_negative_samples:
+                    negative_indices = torch.tensor(
+                        torch.randperm(len(available_negatives))[:num_negative_samples].tolist(),
+                        device=device
+                    )
+                    negative_indices = torch.tensor([available_negatives[i] for i in negative_indices], device=device)
+                    
+                    # Get negative embeddings
+                    negative_embs = self.model(negative_indices)  # Shape: [num_negative_samples, embedding_dim]
+                    
+                    # Negative loss: -Σ log(σ(-u_i^T * v_k))
+                    negative_scores = torch.sum(from_emb * negative_embs, dim=1)  # Shape: [num_negative_samples]
+                    negative_loss = -torch.sum(torch.log(torch.sigmoid(-negative_scores) + 1e-8))
+            
+            # Combine positive and negative losses (weighted by confidence)
+            sample_loss = confidence * positive_loss + negative_loss
+            total_loss = total_loss + sample_loss
         
-        return batch_loss / len(batch)
+        return total_loss / len(batch)
     
     def _extract_embeddings(self, device) -> None:
         """Extract trained embeddings from the model."""
