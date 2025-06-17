@@ -2,9 +2,11 @@
 
 A minimal implementation demonstrating Sequential-ISNE with complete data normalization pipeline.
 
+**Based on the original ISNE (Inductive Shallow Node Embedding) method with extensions for streaming chunk processing.**
+
 ## Overview
 
-Sequential-ISNE processes documents and code in sequential order, discovering theory-practice bridges between research papers and code implementations.
+Sequential-ISNE processes documents and code in sequential order, discovering theory-practice bridges between research papers and code implementations. This work extends the original ISNE algorithm to handle streaming data with global sequential IDs and demonstrates a complete data normalization pipeline.
 
 ## Quick Start
 
@@ -37,3 +39,26 @@ Validated on 3,260 chunks with 416,357 training pairs:
 ## Dependencies
 
 See `requirements.txt` or use Poetry with `pyproject.toml`
+
+## References
+
+This work builds upon the original ISNE (Inductive Shallow Node Embedding) method:
+
+**Original ISNE Paper:**
+```bibtex
+@inproceedings{yang2020inductive,
+  title={Inductive Shallow Node Embedding},
+  author={Yang, Yiming and Zhang, Yujun and Liu, Yizhou and Tang, Jian and Wang, Chuan and Li, Juanzi},
+  booktitle={Proceedings of the 29th ACM International Conference on Information and Knowledge Management},
+  pages={2085--2094},
+  year={2020},
+  organization={ACM}
+}
+```
+
+**Original ISNE Code Repository:**
+- GitHub: [https://github.com/yzjiao/ISNE](https://github.com/yzjiao/ISNE)
+
+## Acknowledgments
+
+We thank the original ISNE authors for their foundational work on inductive node embeddings. Sequential-ISNE extends their approach to handle streaming document processing and adds comprehensive data normalization capabilities for real-world applications.
