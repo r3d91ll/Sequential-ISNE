@@ -4,70 +4,70 @@ __pycache__/
 *$py.class
 *.so
 .Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
-
-# PyTorch
-*.pth
-*.pt
-
-# Jupyter Notebook
-.ipynb_checkpoints
-
-# Environment
-.env
-.venv
 env/
 venv/
 ENV/
-env.bak/
-venv.bak/
+.venv
+
+# Poetry
+poetry.lock
+
+# Test outputs
+test_results/
+*.log
+test_output_*/
+full_scale_test_*.log
+full_scale_results_*.json
+full_scale_summary_*.md
+academic_test_results/
 
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
-
-# Logs and data
-*.log
-logs/
-ML_LOGS_DIR/
-
-# Weights & Biases
-wandb/
-
-# Experiment results and trained models
-experiments/trained_models/
-experiments/results/
-experiments/*_results.json
-experiments/normalized_training/
-output/
+*~
 
 # OS
 .DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
 Thumbs.db
-EOF < /dev/null
-academic_test_results/*
-academic_test_results/*
-full_scale_results*
-full_scale_summary_*
+
+# Data
+*.pkl
+*.pickle
+*.npy
+*.npz
+
+# Model checkpoints
+checkpoints/
+*.pth
+*.pt
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Large data files
+data/
+datasets/
+*.csv
+*.parquet
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Documentation builds
+docs/_build/
+site/
+
+# Coverage
+.coverage
+htmlcov/
+*.cover
+.pytest_cache/
+
+# Environment variables
+.env
+.env.local
